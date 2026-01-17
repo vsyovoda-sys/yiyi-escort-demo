@@ -67,6 +67,18 @@
                         fadeIn: {
                             '0%': { opacity: '0' },
                             '100%': { opacity: '1' },
+                        },
+                        scan: {
+                            '0%': { transform: 'translateY(-100%)' },
+                            '100%': { transform: 'translateY(100%)' },
+                        },
+                        wave: {
+                            '0%, 100%': { height: '10%' },
+                            '50%': { height: '60%' },
+                        },
+                        pop: {
+                            '0%': { transform: 'scale(0.8)', opacity: '0' },
+                            '100%': { transform: 'scale(1)', opacity: '1' },
                         }
                     }
                 }
@@ -110,6 +122,19 @@
             animation: blink 1s step-end infinite;
             vertical-align: text-bottom;
         }
+        .btn-press:active { transform: scale(0.95); transition: transform 0.1s; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+        .list-move, .list-enter-active, .list-leave-active { transition: all 0.5s ease; }
+        .list-enter-from, .list-leave-to { opacity: 0; transform: translateY(30px); }
+        .animate-pulse-slow { animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        .animate-scan { animation: scan 2s linear infinite; }
+        .animate-wave { animation: wave 1.2s ease-in-out infinite; }
+        .animate-pop { animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
     </style>
 </head>
 <body>
@@ -231,6 +256,9 @@
                     </button>
                     <button @click="jumpTo('waiting')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm transition-colors flex items-center gap-2">
                          <span class="text-gray-500 text-xs">07</span> 等待接单
+                    </button>
+                    <button @click="jumpTo('visit')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm text-emerald-300 transition-colors flex items-center gap-2 border border-emerald-500/20 bg-emerald-500/10">
+                         <span class="text-emerald-500 text-xs">08</span> 陪诊视角
                     </button>
                 </div>
             </div>
@@ -539,6 +567,194 @@
                     </div>
                 </transition>
 
+                <!-- 6. VISIT PHASE (陪诊视角) -->
+                <transition name="fade">
+                    <div v-if="appState === 'visit'" class="absolute inset-0 flex flex-col bg-bg z-50">
+                        <!-- Visit Header -->
+                        <div class="mt-14 px-6 mb-4 flex justify-between items-end relative z-10">
+                            <div>
+                                <div class="flex items-center gap-1">
+                                    <button @click="jumpTo('waiting')" class="text-slate-800 hover:text-primary transition-colors -ml-2 p-1">
+                                        <i class="ph-bold ph-caret-left text-2xl"></i>
+                                    </button>
+                                    <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                                        陪诊视角
+                                        <div class="w-2 h-2 bg-care rounded-full animate-pulse-slow"></div>
+                                    </h1>
+                                </div>
+                                <div class="text-xs text-slate-400 font-mono mt-1 pl-7 flex items-center gap-2">
+                                    <i class="ph-fill ph-clock"></i> {{ visitTimer }}
+                                </div>
+                            </div>
+                            <!-- Compliance Badge -->
+                            <div class="flex flex-col items-end">
+                                <div class="bg-slate-900 text-white px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 shadow-sm">
+                                    <div class="flex items-end gap-[2px] h-3">
+                                        <div class="w-0.5 bg-green-400 animate-wave rounded-full" style="animation-duration: 0.8s"></div>
+                                        <div class="w-0.5 bg-green-400 animate-wave rounded-full" style="animation-duration: 1.1s"></div>
+                                        <div class="w-0.5 bg-green-400 animate-wave rounded-full" style="animation-duration: 0.6s"></div>
+                                    </div>
+                                    全程静默存证
+                                </div>
+                                <span class="text-[10px] text-slate-400 mt-1 scale-90 origin-right">合规保护 · 不转文字</span>
+                            </div>
+                        </div>
+
+                        <!-- Visit Timeline -->
+                        <div class="flex-1 overflow-y-auto px-5 pb-36 scroller space-y-4 relative" ref="visitContainer">
+                            <!-- Welcome Msg -->
+                            <div class="text-center py-4">
+                                <span class="bg-black/5 text-slate-500 text-xs px-3 py-1 rounded-full">进入心内科诊室 09:52</span>
+                            </div>
+
+                            <!-- Dynamic Items -->
+                            <transition-group name="list">
+                                <div v-for="(item, index) in visitTimelineItems" :key="item.id" class="w-full animate-float-up">
+                                    
+                                    <!-- TYPE 1: Audio Marker -->
+                                    <div v-if="item.type === 'audio'" class="bg-white p-4 rounded-[1.5rem] shadow-sm border border-slate-100 flex gap-4 items-center">
+                                        <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
+                                            <i class="ph-fill ph-microphone text-blue-500 text-xl"></i>
+                                        </div>
+                                        <div class="flex-1">
+                                            <h4 class="font-bold text-slate-800 text-sm">重点对话已标记</h4>
+                                            <p class="text-slate-500 text-xs mt-0.5">医生语速较快，已为您自动定位时间轴。</p>
+                                        </div>
+                                        <span class="text-xs font-mono text-slate-300">{{ item.time }}</span>
+                                    </div>
+
+                                    <!-- TYPE 2: Vision Guidance -->
+                                    <div v-if="item.type === 'vision'" class="bg-white p-3 rounded-[1.5rem] shadow-md border border-sky-200/50 overflow-hidden relative">
+                                        <div class="flex items-center gap-3 mb-3 px-1 pt-1">
+                                            <div class="w-8 h-8 rounded-full bg-sky-400 text-white flex items-center justify-center">
+                                                <i class="ph-bold ph-magic-wand"></i>
+                                            </div>
+                                            <div>
+                                                <h4 class="font-bold text-slate-800 text-sm">识别结果：血常规检查单</h4>
+                                                <span class="text-xs text-sky-500 font-bold">已生成导诊路线</span>
+                                            </div>
+                                        </div>
+                                        <div class="bg-blue-50/50 rounded-xl p-3 flex gap-4 items-center border border-blue-100">
+                                            <div class="w-12 h-12 bg-white rounded-lg flex items-center justify-center text-sky-400 text-2xl border border-blue-100 shadow-sm">
+                                                <i class="ph-duotone ph-arrow-circle-up-right"></i>
+                                            </div>
+                                            <div>
+                                                <div class="text-xs text-slate-500 mb-0.5">下一步前往</div>
+                                                <div class="text-slate-900 font-bold">2楼 B区 采血窗口</div>
+                                                <div class="text-[10px] text-orange-500 mt-1 bg-orange-50 inline-block px-1.5 rounded py-0.5 border border-orange-100">
+                                                    <i class="ph-fill ph-warning-circle"></i> 需空腹
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- TYPE 3: Risk Alert -->
+                                    <div v-if="item.type === 'risk'" class="bg-red-50 p-4 rounded-[1.5rem] shadow-lg border border-red-100 relative overflow-hidden group">
+                                        <div class="absolute right-0 top-0 w-16 h-16 bg-red-100 rounded-bl-[3rem] -mr-4 -mt-4 z-0"></div>
+                                        <div class="relative z-10">
+                                            <div class="flex items-center gap-2 mb-2 text-red-500">
+                                                <i class="ph-fill ph-siren text-lg animate-pulse"></i> 
+                                                <span class="font-bold text-xs uppercase tracking-wider">用药安全提示</span>
+                                            </div>
+                                            <h3 class="text-slate-800 font-bold text-lg leading-tight mb-2">建议帮阿姨问一下...</h3>
+                                            <p class="text-slate-600 text-sm bg-white/60 p-3 rounded-xl border border-red-100/50 leading-relaxed">
+                                                "阿姨有<span class="font-bold text-red-500">慢性胃炎史</span>，这个药（阿司匹林）饭前吃会不会伤胃？"
+                                            </p>
+                                            <div class="mt-3 flex justify-end">
+                                                <button class="bg-white text-red-500 text-xs font-bold px-3 py-1.5 rounded-full shadow-sm border border-red-100 active:scale-95 transition-transform flex items-center gap-1">
+                                                    <i class="ph-bold ph-read-cv-logo"></i> 
+                                                    查看来源：2023年胃镜报告
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </transition-group>
+                            <div class="h-8"></div>
+                        </div>
+
+                        <!-- Scanner Overlay -->
+                        <transition name="fade">
+                            <div v-if="showVisitScanner" class="absolute inset-0 z-40 bg-black/90 flex flex-col items-center justify-center">
+                                <div class="relative w-72 h-96 border-2 border-white/30 rounded-3xl overflow-hidden">
+                                    <div class="absolute inset-0 bg-gradient-to-b from-sky-400/20 to-transparent animate-scan h-1/2 w-full border-b-2 border-sky-400 shadow-lg shadow-sky-400/50"></div>
+                                    <div class="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-sky-400 rounded-tl-xl"></div>
+                                    <div class="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-sky-400 rounded-tr-xl"></div>
+                                    <div class="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-sky-400 rounded-bl-xl"></div>
+                                    <div class="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-sky-400 rounded-br-xl"></div>
+                                    <div class="absolute bottom-4 left-0 w-full text-center text-white/80 font-mono text-sm">正在解析医疗单据...</div>
+                                </div>
+                                <button @click="finishVisitScan" class="mt-8 bg-white/10 backdrop-blur border border-white/20 text-white rounded-full w-16 h-16 flex items-center justify-center text-2xl hover:bg-white/20 transition-all">
+                                    <i class="ph-fill ph-camera"></i>
+                                </button>
+                            </div>
+                        </transition>
+
+                        <!-- Bottom Action Panel -->
+                        <div class="absolute bottom-0 left-0 w-full p-4 z-30">
+                            <div class="glass-panel w-full rounded-[2.5rem] p-4 shadow-[0_8px_32px_rgba(0,0,0,0.12)] border-t border-white">
+                                
+                                <!-- Mode A: During Visit -->
+                                <div v-if="!visitEnded" class="grid grid-cols-4 gap-2">
+                                    <button @click="addVisitAudioMarker" class="btn-press flex flex-col items-center gap-1 group">
+                                        <div class="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-600 shadow-sm border border-slate-200 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors">
+                                            <i class="ph-fill ph-waveform text-2xl"></i>
+                                        </div>
+                                        <span class="text-[10px] font-bold text-slate-500">标记重点</span>
+                                    </button>
+                                    <button @click="startVisitScan" class="btn-press flex flex-col items-center gap-1 group">
+                                        <div class="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-600 shadow-sm border border-slate-200 group-hover:bg-sky-50 group-hover:text-sky-500 transition-colors">
+                                            <i class="ph-fill ph-scan text-2xl"></i>
+                                        </div>
+                                        <span class="text-[10px] font-bold text-slate-500">拍单据</span>
+                                    </button>
+                                    <button @click="checkVisitDrug" class="btn-press flex flex-col items-center gap-1 group">
+                                        <div class="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-600 shadow-sm border border-slate-200 group-hover:bg-red-50 group-hover:text-red-500 transition-colors">
+                                            <i class="ph-fill ph-pill text-2xl"></i>
+                                        </div>
+                                        <span class="text-[10px] font-bold text-slate-500">查新药</span>
+                                    </button>
+                                    <button @click="endVisitSession" class="btn-press flex flex-col items-center gap-1">
+                                        <div class="w-14 h-14 rounded-2xl bg-slate-900 flex items-center justify-center text-white shadow-lg shadow-slate-900/20">
+                                            <i class="ph-bold ph-power text-xl text-red-400"></i>
+                                        </div>
+                                        <span class="text-[10px] font-bold text-slate-800">结束</span>
+                                    </button>
+                                </div>
+
+                                <!-- Mode B: Post Visit -->
+                                <div v-else class="animate-pop w-full text-center">
+                                    <div class="mb-4">
+                                        <h3 class="text-slate-800 font-bold text-lg">就诊已结束</h3>
+                                        <p class="text-slate-500 text-xs text-center mx-auto px-4 mt-1">
+                                            AI 已自动生成本次就诊的备忘录。录音存证已上传云端加密保险箱。
+                                        </p>
+                                    </div>
+                                    <div class="bg-white/50 border border-white rounded-2xl p-3 mb-4 flex items-center justify-between">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-10 h-10 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
+                                                <i class="ph-fill ph-calendar-plus text-xl"></i>
+                                            </div>
+                                            <div class="text-left">
+                                                <div class="text-xs text-slate-400">设置复诊提醒</div>
+                                                <div class="font-bold text-slate-800 text-sm">2026年1月25日 (周日)</div>
+                                            </div>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" checked class="sr-only peer">
+                                            <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                                        </label>
+                                    </div>
+                                    <button @click="confirmVisitEnd" class="w-full bg-slate-900 text-white py-4 rounded-xl font-bold shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2">
+                                        <i class="ph-bold ph-check-circle"></i> 确认并归档
+                                    </button>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </transition>
+
             </div>
         </div>
     </div>
@@ -608,6 +824,13 @@
                     
                     // Map
                     mapInstance: null,
+
+                    // Visit State (陪诊视角)
+                    visitTimelineItems: [],
+                    showVisitScanner: false,
+                    visitEnded: false,
+                    visitIdCounter: 0,
+                    visitTimer: '00:24:15',
                 }
             },
             mounted() {
@@ -707,10 +930,25 @@
                         this.log('Tag: Emotion = Anxiety', 'match');
                         this.extractedTags['性格需求'] = '耐心/安抚';
                         this.metrics.emp = 95; // High empathy needed
-                        this.matchStatus = 3; // Found 3 perfect matches
+                        this.matchStatus = 5; // Found 5 matches
                         this.userTranscript = recognizedText;
 
-                        aiResponseText = "好的，情况我都了解了。正在为您生成就诊档案，并匹配最合适的陪诊专家，请稍候。";
+                        // AI Asks for Special Requirements
+                        aiResponseText = "收到，我们会为您安排一位耐心细致的陪诊员。除此之外，由于医院环境复杂，您对陪诊员还有什么其他特殊要求吗？比如性别、方言，或者是否需要轮椅服务？";
+                    }
+                    else if (this.turnCount === 4) {
+                        // Turn 4: User states special requirements (New Phase)
+                        recognizedText = "哦对了，我只会说家乡话，普通话听不太懂，最好找个会说本地话的本地人。另外我是女同志，不想让男同志陪着，不方便。";
+                        this.log('Tag: Language = Local Dialect', 'match');
+                        this.log('Tag: Gender = Female Only', 'match');
+                        this.extractedTags['语言要求'] = '本地方言';
+                        this.extractedTags['性别偏好'] = '限女性';
+                        
+                        // Update metrics slightly
+                        this.matchStatus = 2; // Filtered down to 2 perfect matches
+                        this.userTranscript = recognizedText;
+
+                        aiResponseText = "好的，这就为您筛选会说本地方言的女性陪诊专家。所有需求均已记录，正在生成您的就诊档案，请稍候。";
                     }
 
                     // Trigger "LLM" call visuals
@@ -729,7 +967,7 @@
                         await this.playTTS(aiResponseText);
 
                         // If finished, show cards
-                        if (this.turnCount > 3) {
+                        if (this.turnCount > 4) {
                             setTimeout(() => {
                                 this.showResultCards = true;
                                 this.log('Assessment Complete. generated [Doctor_Brief_Card] & [Companion_Persona]', 'success');
@@ -1029,8 +1267,8 @@
                             this.showResultCards = true;
                             // Fill simulated data
                             this.metrics = { pro: 60, str: 85, emp: 95 };
-                            this.extractedTags = { '科室': '心内科', '主诉': '心慌/气短', '年龄': '72岁', '行动': '需搀扶' };
-                            this.matchStatus = 3;
+                            this.extractedTags = { '科室': '心内科', '主诉': '心慌/气短', '年龄': '72岁', '行动': '需搀扶', '性格': '耐心', '语言': '本地方言', '性别': '限女性' };
+                            this.matchStatus = 2;
                             break;
 
                         case 'matching':
@@ -1063,9 +1301,83 @@
                             this.appState = 'waiting';
                             this.displayHeader = "李志愿者距您 800米，预计 5 分钟后到达。请您找个安全的地方坐下，保持电话畅通。如有不适加剧，请直接让我帮您拨打120。";
                             break;
+
+                        case 'visit':
+                            this.appState = 'visit';
+                            this.visitEnded = false;
+                            this.visitTimelineItems = [];
+                            this.showVisitScanner = false;
+                            this.visitTimer = '00:24:15';
+                            break;
                     }
                     
                     this.log(`[DevTools] Jumped to scene: ${scene}`, 'alert');
+                },
+
+                // ==========================
+                // VISIT PHASE LOGIC (陪诊视角)
+                // ==========================
+                getVisitCurrentTime() {
+                    const now = new Date();
+                    return now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+                },
+                
+                scrollVisitToBottom() {
+                    this.$nextTick(() => {
+                        const container = this.$refs.visitContainer;
+                        if(container) {
+                            container.scrollTo({
+                                top: container.scrollHeight,
+                                behavior: 'smooth'
+                            });
+                        }
+                    });
+                },
+
+                addVisitAudioMarker() {
+                    this.visitTimelineItems.push({
+                        id: this.visitIdCounter++,
+                        type: 'audio',
+                        time: this.getVisitCurrentTime()
+                    });
+                    this.scrollVisitToBottom();
+                    this.log('Visit: Audio marker added', 'info');
+                },
+
+                startVisitScan() {
+                    this.showVisitScanner = true;
+                },
+
+                finishVisitScan() {
+                    this.showVisitScanner = false;
+                    setTimeout(() => {
+                        this.visitTimelineItems.push({
+                            id: this.visitIdCounter++,
+                            type: 'vision',
+                            time: this.getVisitCurrentTime()
+                        });
+                        this.scrollVisitToBottom();
+                        this.log('Visit: Vision card generated', 'info');
+                    }, 500);
+                },
+
+                checkVisitDrug() {
+                    this.visitTimelineItems.push({
+                        id: this.visitIdCounter++,
+                        type: 'risk',
+                        time: this.getVisitCurrentTime()
+                    });
+                    this.scrollVisitToBottom();
+                    this.log('Visit: Risk alert triggered', 'alert');
+                },
+
+                endVisitSession() {
+                    this.visitEnded = true;
+                    this.log('Visit: Session ended', 'success');
+                },
+
+                confirmVisitEnd() {
+                    this.jumpTo('intro');
                 },
 
                 playAudio(url) {
