@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>YiYi - 医依</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Tailwind CSS (CDN for prototyping) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans SC"', 'sans-serif'],
+                    },
+                    colors: {
+                        bg: '#FFF9F5', // 暖米色
+                        primary: '#FB923C', // 温暖橘色 (Orange-400)
+                        primaryLight: '#FDBA74', // 浅橘色 (Orange-300)
+                        textDark: '#1E293B', // Slate 800
+                        textLight: '#64748B', // Slate 500
+                        cardBg: '#FFFFFF',
+                    },
+                    borderRadius: {
+                        '3xl': '1.5rem',
+                        '4xl': '2.5rem', // 鹅卵石风格核心
+                        'full': '9999px',
+                    },
+                    boxShadow: {
+                        'soft': '0 20px 40px -10px rgba(244, 114, 100, 0.15)',
+                        'inner-glow': 'inset 0 2px 4px 0 rgba(255, 255, 255, 0.3)',
+                    },
+                    animation: {
+                        'breathe': 'breathe 4s ease-in-out infinite',
+                        'ripple': 'ripple 1.5s cubic-bezier(0, 0.2, 0.8, 1) infinite',
+                        'float-up': 'floatUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'fade-in': 'fadeIn 0.5s ease-out forwards',
+                    },
+                    keyframes: {
+                        breathe: {
+                            '0%, 100%': { transform: 'scale(1)', filter: 'brightness(1)' },
+                            '50%': { transform: 'scale(1.05)', filter: 'brightness(1.1)' },
+                        },
+                        ripple: {
+                            '0%': { transform: 'scale(1)', opacity: '0.6' },
+                            '100%': { transform: 'scale(2)', opacity: '0' },
+                        },
+                        floatUp: {
+                            '0%': { transform: 'translateY(100px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        },
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 全局样式重置 */
+        body {
+            background-color: #f0f0f0; /* 浏览器背景 */
+            font-family: 'Noto Sans SC', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        /* 隐藏滚动条 */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* 模拟小程序容器 */
+        #app-container {
+            width: 100%;
+            max-width: 414px; /* iPhone Max width */
+            height: 100vh;
+            max-height: 896px;
+            background-color: #FFF9F5;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 50px rgba(0,0,0,0.1);
+        }
+
+        @media (min-width: 420px) {
+            #app-container {
+                height: 85vh;
+                border-radius: 2.5rem;
+                border: 8px solid #fff;
+            }
+        }
+
+        /* Vue Transition: Fade */
+        .fade-enter-active, .fade-leave-active {
+            transition: opacity 0.5s ease;
+        }
+        .fade-enter-from, .fade-leave-to {
+            opacity: 0;
+        }
+
+        /* 磨砂玻璃效果 */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        /* 打字机光标 */
+        .cursor-blink {
+            display: inline-block;
+            width: 2px;
+            height: 1.2em;
+            background-color: #F47264;
+            animation: blink 1s step-end infinite;
+            vertical-align: text-bottom;
+        }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    </style>
+</head>
+<body>
+
+    <!-- Vue App Mount Point -->
+    <div id="app" class="w-full h-full flex justify-center items-center">
+        <div id="app-container" class="relative flex flex-col">
+            
+            <!-- 小程序胶囊按钮模拟 (右上角) -->
+            <div class="absolute top-4 right-4 z-50 flex items-center space-x-1 bg-white/40 backdrop-blur rounded-full px-3 py-1.5 border border-white/50 shadow-sm">
+                <div class="w-1 h-1 rounded-full bg-slate-800"></div>
+                <div class="w-1 h-1 rounded-full bg-slate-800"></div>
+                <div class="w-1 h-1 rounded-full bg-slate-800"></div>
+                <div class="w-[1px] h-3 bg-slate-300 mx-2"></div>
+                <div class="w-3 h-3 rounded-full border-2 border-slate-800"></div>
+            </div>
+
+            <!-- Warning Banner if Keys Missing -->
+            <div v-if="missingKeys" class="absolute top-0 left-0 w-full bg-red-500 text-white text-xs p-2 z-[60] text-center">
+                请在 env.js 中配置 API Key
+            </div>
+
+            <!-- VIEW: Unified Interface -->
+            <transition name="fade" mode="out-in">
+                <!-- Initial Start Screen -->
+                <div v-if="appState === 'intro'" key="intro" class="flex-1 flex flex-col items-center justify-center p-8 text-center bg-bg relative overflow-hidden">
+                    <div class="absolute -top-20 -left-20 w-64 h-64 rounded-full bg-gradient-to-br from-primary/10 to-transparent blur-3xl"></div>
+                    <div class="absolute bottom-20 -right-20 w-80 h-80 rounded-full bg-gradient-to-tl from-primaryLight/20 to-transparent blur-3xl"></div>
+
+                    <div class="relative z-10 w-full max-w-xs animate-float-up" style="animation-delay: 0.2s;">
+                        <h1 class="text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primaryLight mb-2" style="line-height: 1.2;">YiYi.</h1>
+                        <p class="text-textLight mb-16 text-lg">温暖的医疗陪伴</p>
+                        
+                        <button 
+                            @click="startFullFlow"
+                            class="w-32 h-32 rounded-full bg-gradient-to-br from-primary to-primaryLight shadow-soft flex items-center justify-center text-white text-4xl transition-transform duration-300 hover:scale-105 active:scale-95 animate-breathe relative mx-auto"
+                        >
+                            <i class="ph-fill ph-microphone"></i>
+                            <div class="absolute inset-0 rounded-full border-2 border-primary/30 animate-ping opacity-20"></div>
+                        </button>
+                        <p class="mt-8 text-textLight text-lg font-medium">{{ preloadProgress }}</p>
+                    </div>
+                </div>
+
+                <!-- Main Interaction View (Orb) -->
+                <div v-else key="main" class="flex-1 flex flex-col relative bg-bg">
+                    
+                    <!-- Header -->
+                    <header class="pt-16 px-8 animate-fade-in flex justify-between items-end">
+                        <div>
+                            <p class="text-textLight text-lg">{{ conversationHeader }}</p>
+                        </div>
+                    </header>
+
+                    <!-- Main Content Center -->
+                    <main class="flex-1 flex flex-col items-center justify-center relative">
+                        
+                        <!-- 对话气泡 (用户输入模拟) -->
+                        <div v-if="transcript" class="absolute top-10 w-full px-8 z-20 transition-all duration-500">
+                            <div class="bg-white/80 backdrop-blur shadow-sm rounded-tr-3xl rounded-tl-3xl rounded-bl-3xl rounded-br-md p-6 animate-float-up">
+                                <p class="text-xl text-textDark leading-relaxed">
+                                    {{ transcript }}<span v-if="orbState === 'listening'" class="cursor-blink"></span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- 核心交互：光球 -->
+                        <div class="relative w-full flex justify-center items-center h-80 z-10">
+                            
+                            <!-- 波纹动画 (Listening State) -->
+                            <div v-if="orbState === 'listening'" class="absolute inset-0 flex justify-center items-center pointer-events-none">
+                                <div class="absolute w-48 h-48 rounded-full border border-primary/30 animate-ripple"></div>
+                                <div class="absolute w-48 h-48 rounded-full border border-primary/20 animate-ripple" style="animation-delay: 0.5s;"></div>
+                            </div>
+
+                            <!-- 光球本体 (No Click Handler needed anymore) -->
+                            <div 
+                                class="relative z-10 transition-all duration-700 ease-spring"
+                                :class="[
+                                    orbState === 'idle' ? 'w-56 h-56 animate-breathe' : '',
+                                    orbState === 'speaking' ? 'w-56 h-56 animate-breathe brightness-110 shadow-lg' : '',
+                                    orbState === 'listening' ? 'w-64 h-64 scale-105' : '',
+                                    orbState === 'processing' ? 'w-24 h-24 rotate-180 duration-1000' : '',
+                                    orbState === 'finished' ? 'w-32 h-32 -translate-y-48' : ''
+                                ]"
+                            > 
+                                <!-- 光球渐变填充 -->
+                                <div class="w-full h-full rounded-full bg-gradient-to-br from-[#FF9A8B] via-[#FF6A88] to-[#FF99AC] shadow-[0_20px_60px_-10px_rgba(255,106,136,0.6)] flex items-center justify-center overflow-hidden relative">
+                                    <!-- 内部高光 -->
+                                    <div class="absolute top-0 left-0 w-full h-full bg-gradient-to-tr from-transparent via-white/20 to-white/40 mix-blend-overlay"></div>
+                                    
+                                    <!-- Icon 根据状态变化 -->
+                                    <i v-if="orbState === 'idle' || orbState === 'speaking'" class="ph-fill ph-microphone text-white text-5xl opacity-80"></i>
+                                    <i v-else-if="orbState === 'listening'" class="ph-bold ph-waveform text-white text-6xl animate-pulse"></i>
+                                    <i v-else-if="orbState === 'processing'" class="ph-bold ph-spinner-gap text-white text-4xl animate-spin"></i>
+                                    <i v-else-if="orbState === 'finished'" class="ph-fill ph-check text-white text-4xl"></i>
+                                </div>
+                            </div>
+                            
+                            <!-- 底部提示文字 -->
+                            <div class="absolute -bottom-12 transition-opacity duration-300 w-full text-center" :class="orbState !== 'finished' ? 'opacity-100' : 'opacity-0'">
+                                <p class="text-textLight/70 font-medium">{{ statusText }}</p>
+                            </div>
+
+                        </div>
+                    </main>
+
+
+                    <!-- 分析结果卡片 (Slide Up) -->
+                    <transition 
+                        enter-active-class="transform transition ease-out duration-500"
+                        enter-from-class="translate-y-full opacity-0"
+                        enter-to-class="translate-y-0 opacity-100"
+                    >
+                        <div v-if="showResultCard" class="absolute bottom-6 left-6 right-6 z-30">
+                            <div class="bg-white rounded-[2rem] p-6 shadow-2xl shadow-primary/20 border-t border-white/50">
+                                <div class="flex items-start justify-between mb-4">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center text-green-500">
+                                            <i class="ph-fill ph-file-text text-2xl"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="font-bold text-textDark text-lg">档案已建立</h3>
+                                            <p class="text-xs text-textLight">刚刚</p>
+                                        </div>
+                                    </div>
+                                    <button class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400">
+                                        <i class="ph-bold ph-check"></i>
+                                    </button>
+                                </div>
+                                
+                                <div class="bg-[#FFF9F5] rounded-3xl p-5 mb-4 border border-orange-100/50">
+                                    <div class="flex justify-between items-end">
+                                        <div class="w-full">
+                                            <p class="text-sm text-textLight mb-1">健康信息摘要</p>
+                                            <div class="flex flex-wrap gap-2 mt-2">
+                                                <span class="px-3 py-1 rounded-full bg-white text-textDark text-sm font-medium border border-gray-100">72岁</span>
+                                                <span class="px-3 py-1 rounded-full bg-white text-textDark text-sm font-medium border border-gray-100">独居</span>
+                                                <span class="px-3 py-1 rounded-full bg-red-50 text-red-500 text-sm font-bold border border-red-100 flex items-center gap-1">
+                                                    <i class="ph-fill ph-warning-circle"></i> 高血压
+                                                </span>
+                                                <span class="px-3 py-1 rounded-full bg-orange-50 text-orange-500 text-sm font-bold border border-orange-100">
+                                                    膝盖痛
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="flex gap-3">
+                                    <button class="flex-1 py-4 bg-gray-100 rounded-full text-textLight font-medium text-sm">修改信息</button>
+                                    <button class="flex-1 py-4 bg-primary text-white rounded-full font-bold shadow-lg shadow-primary/30 text-sm flex items-center justify-center gap-2">
+                                        确认完成
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </transition>
+
+                </div>
+            </transition>
+        </div>
+    </div>
+
+    <!-- Vue Application Logic -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Load Environment Variables -->
+    <script src="env.js"></script>
+    
+    <script>
+        const { createApp, ref, onMounted, nextTick, computed } = Vue
+
+        createApp({
+            setup() {
+                // ==========================================
+                // 配置加载逻辑
+                // ==========================================
+                const env = window.MINIMAX_ENV || {};
+                
+                const MINIMAX_CONFIG = {
+                    GROUP_ID: env.GROUP_ID || "",
+                    API_KEY: env.API_KEY || "",
+                    VOICE_ID: env.VOICE_ID || "female-chengshu",
+                    MODEL_ID: env.MODEL_ID || "speech-01-turbo",
+                }
+
+                // Check for keys
+                const missingKeys = computed(() => {
+                    return !MINIMAX_CONFIG.API_KEY || !MINIMAX_CONFIG.GROUP_ID
+                })
+
+                // State
+                const currentStep = ref(1)
+                const userName = ref('')
+                const currentAudio = ref(null) // 追踪当前的音频对象以防止重叠
+
+                
+                // Step 1 State
+                const registerState = ref('idle') // idle, listening
+                const registerTranscript = ref('')
+
+                // Step 2 State
+                const orbState = ref('idle') // idle, listening, processing, finished
+                const transcript = ref('')
+                const showResultCard = ref(false)
+
+                // New logic for multi-turn interview
+                const interviewStep = ref(0) // 0: Age, 1: History, 2: Family, 3: Current
+                const stepHintText = computed(() => {
+                    const hints = [
+                        "点击回答 年龄",
+                        "点击回答 既往病史",
+                        "点击回答 家庭情况",
+                        "点击回答 近期状况"
+                    ]
+                    return hints[interviewStep.value] || "点击继续"
+                })
+
+                // Methods for Step 1
+                const startRegister = () => {
+                    registerState.value = 'listening'
+                    speak('您好，我是医疗助手依依。请问您怎么称呼？')
+                    
+                    // Simulate Listening
+                    setTimeout(() => {
+                        // Typing effect for name
+                        const name = "张阿姨"
+                        let i = 0
+                        const typeName = setInterval(() => {
+                            registerTranscript.value = "我是" + name.substring(0, i+1)
+                            i++
+                            if(i >= name.length) {
+                                clearInterval(typeName)
+                                // Complete registration
+                                setTimeout(() => {
+                                    userName.value = "张阿姨"
+                                    completeRegistration()
+                                }, 1000)
+                            }
+                        }, 200)
+                    }, 2500) // Wait for TTS to finish roughly
+                }
+
+                const completeRegistration = () => {
+                    currentStep.value = 2
+                    // Auto-greeting in Step 2: Modified for Health Profile Context
+                    setTimeout(() => {
+                        speak(`下午好，张阿姨。听您的声音听得出来您身体还很硬朗呢。为了以后能更好地照顾您，我需要完善一下您的健康档案。首先，请问您今年高寿了？`)
+                    }, 800)
+                }
+
+                // Methods for Step 2
+                const clickOrb = () => {
+                    if (orbState.value !== 'idle') return
+                    
+                    // Start simulation sequence
+                    startListeningSimulation()
+                }
+
+                const startListeningSimulation = () => {
+                    orbState.value = 'listening'
+                    
+                    // Define conversation flow
+                    const dialogs = [
+                        { q: "年龄?", ans: "我今年72了。", nextQ: "72岁，很有福气的年纪。那您以前有过什么确诊的慢性病吗？比如高血压、糖尿病之类的？" },
+                        { q: "病史?", ans: "就有时候血压有点高，吃着药呢。", nextQ: "好的，高血压要注意监测。不知您现在和谁一起住？老伴或者子女在身边吗？" },
+                        { q: "家庭?", ans: "老伴走的早，儿子在上海工作，平时就我一个人。", nextQ: "一个人生活要多注意安全。最后，最近身体有什么特别不舒服的地方吗？" },
+                        { q: "现状?", ans: "也没啥大毛病，就是阴天下雨膝盖疼。", nextQ: "记下来了。张阿姨，您的健康档案已经建好了。以后如果您觉得身体不舒服，或者去医院看病怕麻烦、想找人陪着，就直接打开小程序叫我。医依会一直陪着您的。" }
+                    ]
+
+                    const currentDialog = dialogs[interviewStep.value]
+                    if (!currentDialog) return
+
+                    // Stop previous TTS
+                    if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+
+                    // Simulate speech-to-text with typewriter effect
+                    const targetText = currentDialog.ans
+                    let charIndex = 0
+                    
+                    transcript.value = "" // Clear previous text
+
+                    // Fake latency before "talking" starts
+                    setTimeout(() => {
+                        const typeInterval = setInterval(() => {
+                            if (charIndex < targetText.length) {
+                                transcript.value += targetText.charAt(charIndex)
+                                charIndex++
+                            } else {
+                                clearInterval(typeInterval)
+                                // Finished speaking, move to processing
+                                setTimeout(() => processStep(currentDialog.nextQ), 800)
+                            }
+                        }, 100)
+                    }, 800)
+                }
+
+                const processStep = (nextQuestionText) => {
+                    orbState.value = 'processing'
+                    
+                    // Mock processing time
+                    setTimeout(() => {
+                        orbState.value = 'idle'
+                        
+                        // Speak next question or final conclusion
+                        speak(nextQuestionText)
+                        
+                        // Advance step
+                        interviewStep.value++
+
+                        // Check if finished
+                        if (interviewStep.value >= 4) {
+                             setTimeout(() => {
+                                orbState.value = 'finished'
+                                showResultCard.value = true
+                             }, 14000) // Give time for the long final speech
+                        }
+
+                    }, 1500)
+                }
+
+
+                const speak = async (text) => {
+                    // 1. 停止之前的音频或语音
+                    if (currentAudio.value) {
+                        currentAudio.value.pause();
+                        currentAudio.value.currentTime = 0;
+                    }
+                    if ('speechSynthesis' in window) {
+                        window.speechSynthesis.cancel();
+                    }
+
+                    // 2. 尝试使用 MiniMax API
+                    if (!missingKeys.value) {
+                        try {
+                            console.log(`Calling MiniMax TTS... (Voice: ${MINIMAX_CONFIG.VOICE_ID}, Model: ${MINIMAX_CONFIG.MODEL_ID})`);
+                            // 更新为最新的 V2 接口地址
+                            const url = `https://api.minimax.chat/v1/t2a_v2?GroupId=${MINIMAX_CONFIG.GROUP_ID}`;
+                            const response = await fetch(url, {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': `Bearer ${MINIMAX_CONFIG.API_KEY}`,
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    model: MINIMAX_CONFIG.MODEL_ID,
+                                    text: text,
+                                    stream: false, // 显式关闭流式传输
+                                    voice_setting: {
+                                        voice_id: MINIMAX_CONFIG.VOICE_ID,
+                                        speed: 1.0,
+                                        vol: 1.0,
+                                        pitch: 0
+                                    },
+                                    audio_setting: { // 增加音频原有设定以防万一，虽然v2可能不强求
+                                        sample_rate: 32000,
+                                        bitrate: 128000,
+                                        format: "mp3",
+                                        channel: 1
+                                    }
+                                })
+                            });
+
+                            if (!response.ok) {
+                                throw new Error(`MiniMax API Error: ${response.status}`);
+                            }
+
+                            // 解析 MiniMax 的 JSON 响应
+                            const jsonResponse = await response.json();
+                            
+                            // 检查业务状态码
+                            if (jsonResponse.base_resp && jsonResponse.base_resp.status_code !== 0) {
+                                throw new Error(`MiniMax Service Error: ${jsonResponse.base_resp.status_msg}`);
+                            }
+
+                            // 提取音频数据 (Hex 字符串) 并转换为 Blob
+                            const hexAudio = jsonResponse.data.audio;
+                            if (!hexAudio) {
+                                throw new Error("No audio data received");
+                            }
+
+                            // Hex String -> Uint8Array
+                            const matches = hexAudio.match(/.{1,2}/g);
+                            const buffer = new Uint8Array(matches.map(byte => parseInt(byte, 16)));
+                            const blob = new Blob([buffer], { type: 'audio/mpeg' });
+
+                            const audioUrl = URL.createObjectURL(blob);
+                            const audio = new Audio(audioUrl);
+                            currentAudio.value = audio;
+                            
+                            // 播放并在结束时释放资源
+                            audio.onended = () => {
+                                URL.revokeObjectURL(audioUrl);
+                                currentAudio.value = null; // Reset state
+                            };
+                            
+                            await audio.play();
+                            return; // 成功播放，退出函数
+                        } catch (e) {
+                            console.warn("MiniMax 调用失败，降级使用浏览器 TTS:", e);
+                            // 失败后继续向下执行，使用浏览器兜底
+                        }
+                    }
+
+                    // 3. 浏览器原生 TTS 兜底
+                    if ('speechSynthesis' in window) {
+                        const utterance = new SpeechSynthesisUtterance(text);
+                        utterance.lang = 'zh-CN';
+                        utterance.rate = 0.9;
+                        window.speechSynthesis.speak(utterance);
+                    }
+                }
+
+                // Preload voices
+                onMounted(() => {
+                    if ('speechSynthesis' in window) {
+                        window.speechSynthesis.getVoices()
+                    }
+                })
+
+                return {
+                    currentStep,
+                    userName,
+                    registerState,
+                    registerTranscript,
+                    orbState,
+                    transcript,
+                    showResultCard,
+                    startRegister,
+                    clickOrb,
+                    missingKeys,
+                    stepHintText // Export computed
+                }
+            }
+        }).mount('#app')
+    </script>
+</body>
+</html>
