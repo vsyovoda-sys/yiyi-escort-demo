@@ -7,3 +7,9 @@ node_modules/
 # environment variables (contains secrets)
 env.js
 .env
+
+# development/debug files
+index_with_backend.html
+index.html.bak
+test_keys.js
+download_audio.js
