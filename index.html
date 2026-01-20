@@ -757,6 +757,15 @@
                     if(this.appState === 'splash') this.appState = 'intro';
                 }, 2500);
 
+                // Preload voices for browser TTS (required for some browsers)
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.getVoices();
+                    window.speechSynthesis.onvoiceschanged = () => {
+                        const voices = window.speechSynthesis.getVoices();
+                        this.log('Voices loaded: ' + voices.length, 'info');
+                    };
+                }
+
                 this.log('Matcher Engine initialized', 'info');
             },
             methods: {
@@ -1177,13 +1186,26 @@
                             const utterance = new SpeechSynthesisUtterance(text);
                             utterance.lang = 'zh-CN';
                             utterance.rate = 0.9;
-                            utterance.pitch = 1.0;
+                            utterance.pitch = 1.2; // Higher pitch for female voice
                             
-                            // Try to find a Chinese voice
+                            // Try to find a Chinese female voice
                             const voices = window.speechSynthesis.getVoices();
+                            // Priority: Chinese female voice > any Chinese voice
+                            const zhFemaleVoice = voices.find(v => 
+                                (v.lang.includes('zh') || v.lang.includes('CN')) && 
+                                (v.name.includes('female') || v.name.includes('Female') || 
+                                 v.name.includes('Ting') || v.name.includes('ting') ||
+                                 v.name.includes('Mei') || v.name.includes('Li-') ||
+                                 v.name.includes('婷') || v.name.includes('女'))
+                            );
                             const zhVoice = voices.find(v => v.lang.includes('zh') || v.lang.includes('CN'));
-                            if (zhVoice) {
+                            
+                            if (zhFemaleVoice) {
+                                utterance.voice = zhFemaleVoice;
+                                this.log('Using Chinese female voice: ' + zhFemaleVoice.name, 'info');
+                            } else if (zhVoice) {
                                 utterance.voice = zhVoice;
+                                this.log('Using Chinese voice: ' + zhVoice.name, 'info');
                             }
                             
                             utterance.onend = () => resolve();
