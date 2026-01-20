@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>展示文档</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            scroll-snap-type: y mandatory;
+            overflow-y: scroll;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .section {
+            width: 100vw;
+            height: 100vh;
+            scroll-snap-align: start;
+            scroll-snap-stop: always;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #f5f0e8;
+        }
+
+        .section img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* 第2页logo链接 */
+        .logo-link {
+            position: absolute;
+            /* logo在页面上部，不挡住下方文字 */
+            top: 22%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 180px;
+            height: 180px;
+            z-index: 10;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .logo-link:hover {
+            transform: translate(-50%, -50%) scale(1.05);
+        }
+
+        .logo-link img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        /* 页码指示器 */
+        .page-nav {
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .page-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .page-dot:hover {
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .page-dot.active {
+            background: #f7931e;
+            border-color: white;
+            box-shadow: 0 2px 8px rgba(247, 147, 30, 0.5);
+        }
+
+        @media (max-width: 768px) {
+            .logo-link {
+                width: 120px;
+                height: 120px;
+            }
+
+            .page-nav {
+                right: 10px;
+                gap: 6px;
+            }
+
+            .page-dot {
+                width: 8px;
+                height: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 12个全屏section -->
+    <section class="section" id="page1">
+        <img src="1.jpg" alt="第1页">
+    </section>
+    <section class="section" id="page2">
+        <img src="12.jpg" alt="第2页">
+        <a href="https://vsyovoda-sys.github.io/yiyi-escort-demo/" target="_blank" class="logo-link">
+            <img src="logo.png" alt="Logo">
+        </a>
+    </section>
+    <section class="section" id="page3">
+        <img src="2.jpg" alt="第3页">
+    </section>
+    <section class="section" id="page4">
+        <img src="3.jpg" alt="第4页">
+    </section>
+    <section class="section" id="page5">
+        <img src="4.jpg" alt="第5页">
+    </section>
+    <section class="section" id="page6">
+        <img src="5.jpg" alt="第6页">
+    </section>
+    <section class="section" id="page7">
+        <img src="6.jpg" alt="第7页">
+    </section>
+    <section class="section" id="page8">
+        <img src="7.jpg" alt="第8页">
+    </section>
+    <section class="section" id="page9">
+        <img src="8.jpg" alt="第9页">
+    </section>
+    <section class="section" id="page10">
+        <img src="9.jpg" alt="第10页">
+    </section>
+    <section class="section" id="page11">
+        <img src="10.jpg" alt="第11页">
+    </section>
+    <section class="section" id="page12">
+        <img src="11.jpg" alt="第12页">
+    </section>
+
+    <!-- 右侧导航点 -->
+    <nav class="page-nav">
+        <div class="page-dot active" data-page="1"></div>
+        <div class="page-dot" data-page="2"></div>
+        <div class="page-dot" data-page="3"></div>
+        <div class="page-dot" data-page="4"></div>
+        <div class="page-dot" data-page="5"></div>
+        <div class="page-dot" data-page="6"></div>
+        <div class="page-dot" data-page="7"></div>
+        <div class="page-dot" data-page="8"></div>
+        <div class="page-dot" data-page="9"></div>
+        <div class="page-dot" data-page="10"></div>
+        <div class="page-dot" data-page="11"></div>
+        <div class="page-dot" data-page="12"></div>
+    </nav>
+
+    <script>
+        const sections = document.querySelectorAll('.section');
+        const dots = document.querySelectorAll('.page-dot');
+
+        // 点击导航点跳转
+        dots.forEach(dot => {
+            dot.addEventListener('click', () => {
+                const pageNum = dot.dataset.page;
+                document.getElementById('page' + pageNum).scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+
+        // 监听滚动更新导航点状态
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const pageId = entry.target.id;
+                    const pageNum = pageId.replace('page', '');
+                    
+                    dots.forEach(dot => {
+                        dot.classList.toggle('active', dot.dataset.page === pageNum);
+                    });
+                }
+            });
+        }, {
+            threshold: 0.5
+        });
+
+        sections.forEach(section => observer.observe(section));
+
+        // 键盘导航
+        document.addEventListener('keydown', (e) => {
+            const currentActive = document.querySelector('.page-dot.active');
+            const currentPage = parseInt(currentActive.dataset.page);
+
+            if (e.key === 'ArrowDown' || e.key === ' ' || e.key === 'ArrowRight') {
+                e.preventDefault();
+                if (currentPage < 12) {
+                    document.getElementById('page' + (currentPage + 1)).scrollIntoView({ behavior: 'smooth' });
+                }
+            } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                e.preventDefault();
+                if (currentPage > 1) {
+                    document.getElementById('page' + (currentPage - 1)).scrollIntoView({ behavior: 'smooth' });
+                }
+            } else if (e.key === 'Home') {
+                e.preventDefault();
+                document.getElementById('page1').scrollIntoView({ behavior: 'smooth' });
+            } else if (e.key === 'End') {
+                e.preventDefault();
+                document.getElementById('page12').scrollIntoView({ behavior: 'smooth' });
+            }
+        });
+    </script>
+</body>
+</html>
