@@ -3,47 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>YiYi - 医依</title>
+    <title>YiYi - 智能陪诊匹配 (Medical Escort Matcher)</title>
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     
-    <!-- Icons -->
+    <!-- Icons & Crypto -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
 
-    <!-- Tailwind CSS (CDN for prototyping) -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Leaflet Maps (Free OpenSource Map) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     fontFamily: {
                         sans: ['"Noto Sans SC"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
                     },
                     colors: {
-                        bg: '#FFF9F5', // 暖米色
-                        primary: '#FB923C', // 温暖橘色 (Orange-400)
-                        primaryLight: '#FDBA74', // 浅橘色 (Orange-300)
-                        textDark: '#1E293B', // Slate 800
-                        textLight: '#64748B', // Slate 500
-                        cardBg: '#FFFFFF',
-                    },
-                    borderRadius: {
-                        '3xl': '1.5rem',
-                        '4xl': '2.5rem', // 鹅卵石风格核心
-                        'full': '9999px',
-                    },
-                    boxShadow: {
-                        'soft': '0 20px 40px -10px rgba(244, 114, 100, 0.15)',
-                        'inner-glow': 'inset 0 2px 4px 0 rgba(255, 255, 255, 0.3)',
+                        bg: '#FFF9F5', // Warm Beige
+                        primary: '#FB923C', // Orange-400
+                        primaryLight: '#FDBA74', // Orange-300
+                        sysBg: '#0F172A', // Slate 900
+                        sysTerm: '#1E293B', // Slate 800
+                        sysAccent: '#38BDF8', // Sky 400
+                        sysWarn: '#F43F5E', // Rose 500
+                        care: '#10B981', // Emerald 500 (Matches "Service")
                     },
                     animation: {
                         'breathe': 'breathe 4s ease-in-out infinite',
                         'ripple': 'ripple 1.5s cubic-bezier(0, 0.2, 0.8, 1) infinite',
-                        'float-up': 'floatUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-                        'fade-in': 'fadeIn 0.5s ease-out forwards',
+                        'float-up': 'floatUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'fade-in': 'fadeIn 0.6s ease-out forwards',
+                        'slide-up': 'slideUp 0.5s ease-out forwards',
                     },
                     keyframes: {
                         breathe: {
@@ -55,12 +57,28 @@
                             '100%': { transform: 'scale(2)', opacity: '0' },
                         },
                         floatUp: {
-                            '0%': { transform: 'translateY(100px)', opacity: '0' },
+                            '0%': { transform: 'translateY(40px)', opacity: '0' },
                             '100%': { transform: 'translateY(0)', opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(100%)' },
+                            '100%': { transform: 'translateY(0)' },
                         },
                         fadeIn: {
                             '0%': { opacity: '0' },
                             '100%': { opacity: '1' },
+                        },
+                        scan: {
+                            '0%': { transform: 'translateY(-100%)' },
+                            '100%': { transform: 'translateY(100%)' },
+                        },
+                        wave: {
+                            '0%, 100%': { height: '10%' },
+                            '50%': { height: '60%' },
+                        },
+                        pop: {
+                            '0%': { transform: 'scale(0.8)', opacity: '0' },
+                            '100%': { transform: 'scale(1)', opacity: '1' },
                         }
                     }
                 }
@@ -68,504 +86,1285 @@
         }
     </script>
     <style>
-        /* 全局样式重置 */
         body {
-            background-color: #f0f0f0; /* 浏览器背景 */
+            background-color: #1a1a1a;
+            background-image: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
             font-family: 'Noto Sans SC', sans-serif;
             -webkit-font-smoothing: antialiased;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
             margin: 0;
             overflow: hidden;
-        }
-
-        /* 隐藏滚动条 */
-        ::-webkit-scrollbar {
-            display: none;
-        }
-
-        /* 模拟小程序容器 */
-        #app-container {
-            width: 100%;
-            max-width: 414px; /* iPhone Max width */
             height: 100vh;
-            max-height: 896px;
+            width: 100vw;
+        }
+
+        #phone-frame {
+            width: 390px;
+            height: 844px;
             background-color: #FFF9F5;
+            border-radius: 40px;
             position: relative;
             overflow: hidden;
-            box-shadow: 0 0 50px rgba(0,0,0,0.1);
+            box-shadow: 0 0 0 12px #333, 0 20px 50px rgba(0,0,0,0.5);
+            z-index: 10;
         }
 
-        @media (min-width: 420px) {
-            #app-container {
-                height: 85vh;
-                border-radius: 2.5rem;
-                border: 8px solid #fff;
-            }
-        }
-
-        /* Vue Transition: Fade */
-        .fade-enter-active, .fade-leave-active {
-            transition: opacity 0.5s ease;
-        }
-        .fade-enter-from, .fade-leave-to {
-            opacity: 0;
-        }
-
-        /* 磨砂玻璃效果 */
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-        }
-
-        /* 打字机光标 */
-        .cursor-blink {
+        .scroller::-webkit-scrollbar { width: 4px; }
+        .scroller::-webkit-scrollbar-thumb { background-color: #334155; border-radius: 4px; }
+        .btn-clean { -webkit-tap-highlight-color: transparent; }
+        
+        .sys-cursor {
             display: inline-block;
-            width: 2px;
+            width: 8px;
             height: 1.2em;
-            background-color: #F47264;
+            background-color: #38BDF8;
             animation: blink 1s step-end infinite;
             vertical-align: text-bottom;
         }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        .btn-press:active { transform: scale(0.95); transition: transform 0.1s; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+        .list-move, .list-enter-active, .list-leave-active { transition: all 0.5s ease; }
+        .list-enter-from, .list-leave-to { opacity: 0; transform: translateY(30px); }
+        .animate-pulse-slow { animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        .animate-scan { animation: scan 2s linear infinite; }
+        .animate-wave { animation: wave 1.2s ease-in-out infinite; }
+        .animate-pop { animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
     </style>
 </head>
 <body>
 
-    <!-- Vue App Mount Point -->
-    <div id="app" class="w-full h-full flex justify-center items-center">
-        <div id="app-container" class="relative flex flex-col">
+    <div id="app" class="w-full h-full flex items-center justify-center p-8 gap-6">
+
+        <!-- ================= NAVIGATION SIDEBAR (LEFT) ================= -->
+        <div class="hidden md:flex flex-col gap-3 animate-fade-in">
+            <div class="bg-gray-800 text-white p-4 rounded-2xl shadow-xl border border-gray-700 w-52">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <i class="ph-bold ph-sliders-horizontal"></i> 场景导航
+                </h3>
+                <div class="space-y-2">
+                    <button @click="jumpTo('intro')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm transition-colors flex items-center gap-2" :class="{'bg-gray-700': appState === 'intro'}">
+                        <span class="text-gray-500 text-xs">01</span> 首页封面
+                    </button>
+                    <button @click="jumpTo('conversation')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm transition-colors flex items-center gap-2" :class="{'bg-gray-700': appState === 'conversation' && !showResultCards}">
+                        <span class="text-gray-500 text-xs">02</span> 语音问诊
+                    </button>
+                    <button @click="jumpTo('results')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm transition-colors flex items-center gap-2" :class="{'bg-gray-700': appState === 'conversation' && showResultCards}">
+                        <span class="text-gray-500 text-xs">03</span> 建档结果
+                    </button>
+                    <button @click="jumpTo('matching')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm transition-colors flex items-center gap-2" :class="{'bg-gray-700': appState === 'matching'}">
+                        <span class="text-gray-500 text-xs">04</span> 陪诊匹配
+                    </button>
+                    <button @click="jumpTo('waiting')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm transition-colors flex items-center gap-2" :class="{'bg-gray-700': appState === 'waiting'}">
+                        <span class="text-gray-500 text-xs">05</span> 等待接单
+                    </button>
+                    <button @click="jumpTo('visit')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm text-emerald-300 transition-colors flex items-center gap-2 border border-emerald-500/20 bg-emerald-500/10" :class="{'!bg-emerald-600': appState === 'visit'}">
+                        <span class="text-emerald-500 text-xs">06</span> 陪诊视角
+                    </button>
+                </div>
+            </div>
             
-            <!-- 小程序胶囊按钮模拟 (右上角) -->
-            <div class="absolute top-4 right-4 z-50 flex items-center space-x-1 bg-white/40 backdrop-blur rounded-full px-3 py-1.5 border border-white/50 shadow-sm">
-                <div class="w-1 h-1 rounded-full bg-slate-800"></div>
-                <div class="w-1 h-1 rounded-full bg-slate-800"></div>
-                <div class="w-1 h-1 rounded-full bg-slate-800"></div>
-                <div class="w-[1px] h-3 bg-slate-300 mx-2"></div>
-                <div class="w-3 h-3 rounded-full border-2 border-slate-800"></div>
+            <div class="bg-gray-800 text-white p-4 rounded-2xl shadow-xl border border-gray-700 w-52">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">开发工具</h3>
+                <button @click="reloadApp" class="w-full text-left px-3 py-2 rounded hover:bg-red-500/20 text-red-300 text-sm transition-colors flex items-center gap-2">
+                    <i class="ph-bold ph-arrow-counter-clockwise"></i> 重置应用
+                </button>
+                <div class="mt-3 text-xs text-gray-500">
+                    <p>当前状态: {{ appState }}</p>
+                    <p class="mt-1 text-yellow-400">UI Only 版本</p>
+                </div>
             </div>
+        </div>
 
-            <!-- Warning Banner if Keys Missing -->
-            <div v-if="missingKeys" class="absolute top-0 left-0 w-full bg-red-500 text-white text-xs p-2 z-[60] text-center">
-                请在 env.js 中配置 API Key
-            </div>
-
-            <!-- VIEW: Unified Interface -->
-            <transition name="fade" mode="out-in">
-                <!-- Initial Start Screen -->
-                <div v-if="appState === 'intro'" key="intro" class="flex-1 flex flex-col items-center justify-center p-8 text-center bg-bg relative overflow-hidden">
-                    <div class="absolute -top-20 -left-20 w-64 h-64 rounded-full bg-gradient-to-br from-primary/10 to-transparent blur-3xl"></div>
-                    <div class="absolute bottom-20 -right-20 w-80 h-80 rounded-full bg-gradient-to-tl from-primaryLight/20 to-transparent blur-3xl"></div>
-
-                    <div class="relative z-10 w-full max-w-xs animate-float-up" style="animation-delay: 0.2s;">
-                        <h1 class="text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primaryLight mb-2" style="line-height: 1.2;">YiYi.</h1>
-                        <p class="text-textLight mb-16 text-lg">温暖的医疗陪伴</p>
-                        
-                        <button 
-                            @click="startFullFlow"
-                            class="w-32 h-32 rounded-full bg-gradient-to-br from-primary to-primaryLight shadow-soft flex items-center justify-center text-white text-4xl transition-transform duration-300 hover:scale-105 active:scale-95 animate-breathe relative mx-auto"
-                        >
-                            <i class="ph-fill ph-microphone"></i>
-                            <div class="absolute inset-0 rounded-full border-2 border-primary/30 animate-ping opacity-20"></div>
-                        </button>
-                        <p class="mt-8 text-textLight text-lg font-medium">{{ preloadProgress }}</p>
+        <!-- ================= PHONE INTERFACE (CENTER) ================= -->
+        <div id="phone-frame">
+            <div class="w-full h-full flex flex-col bg-bg relative">
+                
+                <!-- Status Bar -->
+                <div class="h-12 w-full flex justify-between items-center px-6 pt-3 z-50">
+                    <span class="text-slate-900 font-medium text-sm">9:41</span>
+                    <div class="flex gap-2 text-slate-900 opacity-80">
+                        <i class="ph-fill ph-wifi-high"></i>
+                        <i class="ph-fill ph-battery-full"></i>
                     </div>
                 </div>
+                <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[120px] h-[34px] bg-black rounded-b-[18px] z-50"></div>
 
-                <!-- Main Interaction View (Orb) -->
-                <div v-else key="main" class="flex-1 flex flex-col relative bg-bg">
-                    
-                    <!-- Header -->
-                    <header class="pt-16 px-8 animate-fade-in flex justify-between items-end">
-                        <div>
-                            <p class="text-textLight text-lg">{{ conversationHeader }}</p>
+                <!-- 1. SPLASH -->
+                <transition name="fade">
+                    <div v-if="appState === 'splash'" class="absolute inset-0 z-50 bg-bg flex flex-col items-center justify-center space-y-8">
+                        <div class="w-32 h-32 relative animate-float-up">
+                            <img src="logo.png" alt="Logo" class="w-full h-full object-contain drop-shadow-xl" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                            <div class="hidden w-full h-full rounded-[2rem] bg-gradient-to-br from-orange-400 to-pink-500 items-center justify-center text-white text-5xl font-bold">医</div>
                         </div>
-                    </header>
+                        <div class="text-center animate-fade-in" style="animation-delay: 0.3s">
+                            <h1 class="text-2xl font-bold text-slate-800 tracking-wide mb-2">医依YiYi</h1>
+                            <p class="text-primary font-medium tracking-[0.2em] text-sm"> 独自就医有所依</p>
+                        </div>
+                    </div>
+                </transition>
 
-                    <!-- Main Content Center -->
-                    <main class="flex-1 flex flex-col items-center justify-center relative">
-                        
-                        <!-- 对话气泡 (用户输入模拟) -->
-                        <div v-if="transcript" class="absolute top-10 w-full px-8 z-20 transition-all duration-500">
-                            <div class="bg-white/80 backdrop-blur shadow-sm rounded-tr-3xl rounded-tl-3xl rounded-bl-3xl rounded-br-md p-6 animate-float-up">
-                                <p class="text-xl text-textDark leading-relaxed">
-                                    {{ transcript }}<span v-if="orbState === 'listening'" class="cursor-blink"></span>
-                                </p>
+                <!-- 2. INTRO -->
+                <transition name="fade">
+                    <div v-if="appState === 'intro'" class="absolute inset-0 flex flex-col z-40 bg-bg">
+                        <div class="flex-1 flex flex-col items-center justify-center p-8 text-center">
+                            <div class="w-24 h-24 bg-white rounded-full shadow-sm flex items-center justify-center mb-8 animate-float-up">
+                                <i class="ph-fill ph-clipboard-text text-5xl text-primary"></i>
                             </div>
+                            <h2 class="text-5xl font-bold text-slate-800 mb-6">建立陪诊档案</h2>
+                            <p class="text-slate-500 text-2xl leading-relaxed max-w-[320px]">
+                                我会问您几个简单的问题，为您建立一份专属的就诊档案，并匹配最合适的陪诊员。
+                            </p>
+                        </div>
+                        <div class="p-8 pb-16">
+                            <button @click="startConversation" class="w-full bg-slate-900 text-white py-6 rounded-[2rem] text-2xl font-bold shadow-xl shadow-slate-900/10 active:scale-95 transition-transform flex items-center justify-center gap-2">
+                                <i class="ph-bold ph-file-plus"></i>
+                                开始建档
+                            </button>
+                        </div>
+                    </div>
+                </transition>
+
+                <!-- 3. CONVERSATION MAIN -->
+                <transition name="fade">
+                    <div v-if="appState === 'conversation'" class="absolute inset-0 flex flex-col pb-8">
+                        <!-- Top Text Area -->
+                        <div class="pt-28 px-8 pb-4 min-h-[180px]">
+                            <h2 class="text-3xl font-bold text-slate-800 leading-relaxed transition-all duration-500">{{ displayHeader }}</h2>
                         </div>
 
-                        <!-- 核心交互：光球 -->
-                        <div class="relative w-full flex justify-center items-center h-80 z-10">
-                            
-                            <!-- 波纹动画 (Listening State) -->
-                            <div v-if="orbState === 'listening'" class="absolute inset-0 flex justify-center items-center pointer-events-none">
-                                <div class="absolute w-48 h-48 rounded-full border border-primary/30 animate-ripple"></div>
-                                <div class="absolute w-48 h-48 rounded-full border border-primary/20 animate-ripple" style="animation-delay: 0.5s;"></div>
-                            </div>
-
-                            <!-- 光球本体 (No Click Handler needed anymore) -->
-                            <div 
-                                class="relative z-10 transition-all duration-700 ease-spring"
-                                :class="[
-                                    orbState === 'idle' ? 'w-56 h-56 animate-breathe' : '',
-                                    orbState === 'speaking' ? 'w-56 h-56 animate-breathe brightness-110 shadow-lg' : '',
-                                    orbState === 'listening' ? 'w-64 h-64 scale-105' : '',
-                                    orbState === 'processing' ? 'w-24 h-24 rotate-180 duration-1000' : '',
-                                    orbState === 'finished' ? 'w-32 h-32 -translate-y-48' : ''
-                                ]"
-                            > 
-                                <!-- 光球渐变填充 -->
-                                <div class="w-full h-full rounded-full bg-gradient-to-br from-[#FF9A8B] via-[#FF6A88] to-[#FF99AC] shadow-[0_20px_60px_-10px_rgba(255,106,136,0.6)] flex items-center justify-center overflow-hidden relative">
-                                    <!-- 内部高光 -->
-                                    <div class="absolute top-0 left-0 w-full h-full bg-gradient-to-tr from-transparent via-white/20 to-white/40 mix-blend-overlay"></div>
-                                    
-                                    <!-- Icon 根据状态变化 -->
-                                    <i v-if="orbState === 'idle' || orbState === 'speaking'" class="ph-fill ph-microphone text-white text-5xl opacity-80"></i>
-                                    <i v-else-if="orbState === 'listening'" class="ph-bold ph-waveform text-white text-6xl animate-pulse"></i>
-                                    <i v-else-if="orbState === 'processing'" class="ph-bold ph-spinner-gap text-white text-4xl animate-spin"></i>
-                                    <i v-else-if="orbState === 'finished'" class="ph-fill ph-check text-white text-4xl"></i>
+                        <!-- Content Area -->
+                        <div class="flex-1 relative px-6 overflow-hidden">
+                            <!-- Helper Bubble -->
+                            <div v-if="userTranscript" class="absolute top-0 right-0 max-w-[90%] z-10">
+                                <div class="bg-orange-50/50 backdrop-blur border border-orange-100 p-5 rounded-3xl rounded-tr-sm animate-float-up shadow-sm">
+                                    <p class="text-slate-800 text-xl font-medium leading-relaxed">{{ userTranscript }}</p>
                                 </div>
                             </div>
                             
-                            <!-- 底部提示文字 -->
-                            <div class="absolute -bottom-12 transition-opacity duration-300 w-full text-center" :class="orbState !== 'finished' ? 'opacity-100' : 'opacity-0'">
-                                <p class="text-textLight/70 font-medium">{{ statusText }}</p>
-                            </div>
-
-                        </div>
-                    </main>
-
-
-                    <!-- 分析结果卡片 (Slide Up) -->
-                    <transition 
-                        enter-active-class="transform transition ease-out duration-500"
-                        enter-from-class="translate-y-full opacity-0"
-                        enter-to-class="translate-y-0 opacity-100"
-                    >
-                        <div v-if="showResultCard" class="absolute bottom-6 left-6 right-6 z-30">
-                            <div class="bg-white rounded-[2rem] p-6 shadow-2xl shadow-primary/20 border-t border-white/50">
-                                <div class="flex items-start justify-between mb-4">
-                                    <div class="flex items-center space-x-3">
-                                        <div class="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center text-green-500">
-                                            <i class="ph-fill ph-file-text text-2xl"></i>
+                            <!-- RESULT CARDS -->
+                            <transition name="slide-up">
+                                <div v-if="showResultCards" class="absolute inset-0 z-20 overflow-y-auto pt-10 pb-20 space-y-4 px-1 scroller">
+                                    
+                                    <!-- Card 1: For Doctor -->
+                                    <div class="bg-white rounded-3xl p-6 shadow-lg border border-slate-100 relative overflow-hidden animate-slide-up" style="animation-delay: 0.1s">
+                                        <div class="absolute top-0 left-0 w-2 h-full bg-blue-500"></div>
+                                        <div class="flex justify-between items-start mb-4">
+                                            <h4 class="font-bold text-2xl text-slate-800 flex items-center gap-2">
+                                                <i class="ph-fill ph-file-text text-blue-500"></i> 就诊速览卡
+                                            </h4>
+                                            <span class="text-sm bg-slate-100 text-slate-500 px-3 py-1.5 rounded font-bold">给医生展示</span>
                                         </div>
-                                        <div>
-                                            <h3 class="font-bold text-textDark text-lg">档案已建立</h3>
-                                            <p class="text-xs text-textLight">刚刚</p>
+                                        <div class="bg-blue-50/50 rounded-2xl p-4 space-y-3 text-lg text-slate-700">
+                                            <div class="grid grid-cols-[80px_1fr] gap-2 items-center">
+                                                <span class="text-slate-500">就诊人</span>
+                                                <span class="font-bold text-slate-900 text-xl">王阿姨 (72岁)</span>
+                                            </div>
+                                            <div class="grid grid-cols-[80px_1fr] gap-2">
+                                                <span class="text-slate-500">主诉</span>
+                                                <span class="text-slate-900 font-medium">心慌气短，偶有早搏感</span>
+                                            </div>
+                                            <div class="grid grid-cols-[80px_1fr] gap-2">
+                                                <span class="text-slate-500">既往史</span>
+                                                <span class="text-slate-900 bg-white px-2 py-0.5 rounded border border-blue-100 inline-block font-medium">高血压(10年)</span>
+                                            </div>
                                         </div>
                                     </div>
-                                    <button class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400">
-                                        <i class="ph-bold ph-check"></i>
-                                    </button>
+
+                                    <!-- Card 2: Companion Persona -->
+                                    <div class="bg-slate-900 rounded-3xl p-6 shadow-xl shadow-slate-900/20 text-white relative overflow-hidden animate-slide-up" style="animation-delay: 0.3s">
+                                        <!-- Decorative BG -->
+                                        <div class="absolute -right-4 -top-4 w-32 h-32 bg-gradient-to-br from-orange-400 to-pink-500 rounded-full blur-3xl opacity-30"></div>
+                                        
+                                        <div class="flex justify-between items-start mb-6 relative z-10">
+                                            <div>
+                                                <h4 class="font-bold text-2xl flex items-center gap-2">
+                                                    <i class="ph-fill ph-user-focus text-orange-400"></i> 推荐陪诊画像
+                                                </h4>
+                                                <p class="text-sm text-slate-400 mt-1">基于 5 项需求评估生成</p>
+                                            </div>
+                                            <div class="text-3xl font-bold text-orange-400">Lv.3</div>
+                                        </div>
+
+                                        <!-- Metrics Grid -->
+                                        <div class="grid grid-cols-2 gap-4 mb-6 relative z-10">
+                                            <div class="bg-white/10 rounded-2xl p-4 backdrop-blur-sm">
+                                                <div class="text-base text-slate-300 mb-1">推荐技能</div>
+                                                <div class="font-bold text-xl">心内科陪诊经验</div>
+                                            </div>
+                                            <div class="bg-white/10 rounded-2xl p-4 backdrop-blur-sm">
+                                                <div class="text-base text-slate-300 mb-1">性格画像</div>
+                                                <div class="font-bold text-xl">耐心、高共情</div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Sliders -->
+                                        <div class="space-y-4 relative z-10">
+                                            <div class="flex items-center gap-3 text-base">
+                                                <span class="w-20 text-slate-300">体力值</span>
+                                                <div class="flex-1 h-3 bg-white/20 rounded-full overflow-hidden">
+                                                    <div class="h-full bg-green-400 w-[80%]"></div>
+                                                </div>
+                                                <span class="text-green-400 font-bold text-lg">高</span>
+                                            </div>
+                                            <div class="flex items-center gap-3 text-base">
+                                                <span class="w-20 text-slate-300">情绪安抚</span>
+                                                <div class="flex-1 h-3 bg-white/20 rounded-full overflow-hidden">
+                                                    <div class="h-full bg-pink-400 w-[95%]"></div>
+                                                </div>
+                                                <span class="text-pink-400 font-bold text-lg">极高</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Card 3: Notes for Companion -->
+                                    <div class="bg-orange-50 rounded-3xl p-6 shadow-lg border border-orange-100 relative overflow-hidden animate-slide-up" style="animation-delay: 0.5s">
+                                        <div class="flex justify-between items-start mb-4">
+                                            <h4 class="font-bold text-2xl text-slate-800 flex items-center gap-2">
+                                                <i class="ph-fill ph-warning-circle text-orange-500"></i> 陪诊注意事项
+                                            </h4>
+                                            <span class="text-sm bg-white text-orange-600 border border-orange-200 px-3 py-1.5 rounded font-bold">派单必读</span>
+                                        </div>
+                                        <div class="space-y-3">
+                                            <div class="flex items-start gap-3">
+                                                <div class="w-2 h-2 rounded-full bg-orange-400 mt-2.5"></div>
+                                                <p class="text-xl text-slate-700 font-bold">老人有些耳背，沟通请放慢语速</p>
+                                            </div>
+                                            <div class="flex items-start gap-3">
+                                                <div class="w-2 h-2 rounded-full bg-orange-400 mt-2.5"></div>
+                                                <p class="text-xl text-slate-700 font-bold">对医院环境陌生，易焦虑，需全程安抚</p>
+                                            </div>
+                                            <div class="flex items-start gap-3">
+                                                <div class="w-2 h-2 rounded-full bg-orange-400 mt-2.5"></div>
+                                                <p class="text-xl text-slate-700 font-bold">腿脚不便，建议携带折叠轮椅</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Add Start Button for Next Phase -->
+                                    <div class="pt-8 pb-4">
+                                        <button @click="startMatchPhase" class="w-full bg-slate-900 text-white py-5 rounded-[2rem] text-2xl font-bold shadow-xl active:scale-95 transition-transform flex items-center justify-center gap-2 animate-slide-up" style="animation-delay: 1s">
+                                            <i class="ph-bold ph-paper-plane-right"></i>
+                                            完成建档
+                                        </button>
+                                    </div>
+
                                 </div>
+                            </transition>
+                        </div>
+
+                        <!-- Orb / Audio Visualizer -->
+                        <div class="h-[35%] flex flex-col items-center justify-end relative">
+                            <div class="relative w-full flex justify-center items-center h-48">
+                                <div v-if="orbState === 'listening'" class="absolute rounded-full border border-primary/20 w-48 h-48 animate-ripple"></div>
+                                <div 
+                                    class="relative rounded-full transition-all duration-700 ease-out shadow-lg"
+                                    :class="getOrbClass()"
+                                >
+                                    <div class="absolute inset-0 bg-white/30 blur-sm rounded-full"></div>
+                                </div>
+                            </div>
+                            <p class="mt-4 text-xl text-slate-500 font-bold transition-opacity duration-300 h-8">{{ statusText }}</p>
+                        </div>
+                    </div>
+                </transition>
+
+                <!-- 4. MATCHING PHASE (LBS MAP) -->
+                <transition name="fade" @after-enter="initMap">
+                    <div v-if="appState === 'matching'" class="absolute inset-0 flex flex-col bg-slate-100 z-50">
+                        <!-- Leaflet Map Container -->
+                        <div id="map-container" class="absolute inset-0 z-0 bg-slate-200"></div>
+                        
+                        <!-- Map Overlay Gradient (Kept for text readability) -->
+                        <div class="absolute inset-0 bg-gradient-to-b from-white/90 via-transparent to-white/95 z-0 pointer-events-none"></div>
+
+                        <!-- Top Bar -->
+                        <div class="relative z-10 pt-16 px-6 flex justify-between items-center pointer-events-none">
+                            <h2 class="text-3xl font-bold text-slate-800 drop-shadow-sm">附近陪诊资源</h2>
+                            <div class="bg-white/90 backdrop-blur px-3 py-1 rounded-full text-sm font-bold text-green-600 shadow-sm flex items-center gap-1">
+                                <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                                GPS定位中...
+                            </div>
+                        </div>
+
+                        <!-- Content Area -->
+                        <div class="flex-1 relative z-10 flex flex-col justify-end pb-8 px-6">
+                            
+                            <!-- STEP 1: Choice Buttons -->
+                            <div v-if="matchStep === 0" class="flex gap-4 animate-slide-up">
+                                <button @click="startRealTimeMatch" class="flex-1 h-32 bg-slate-900 rounded-[2rem] shadow-xl flex flex-col items-center justify-center text-white active:scale-95 transition-all">
+                                    <i class="ph-fill ph-clock-countdown text-4xl mb-2 text-orange-400"></i>
+                                    <span class="text-2xl font-bold">实时陪诊</span>
+                                </button>
+                                <button @click="startAppointmentMatch" class="flex-1 h-32 bg-white rounded-[2rem] shadow-xl flex flex-col items-center justify-center text-slate-800 border border-slate-200 active:scale-95 transition-all">
+                                    <i class="ph-fill ph-calendar-check text-4xl mb-2 text-blue-500"></i>
+                                    <span class="text-2xl font-bold">预约陪诊</span>
+                                </button>
+                            </div>
+
+                            <!-- STEP 2: Real-time Analysis (Red Alert Area) & Appointment Info -->
+                            <div v-if="matchStep === 1 || matchStep === 2 || matchStep === 4" class="w-full relative">
+                                <!-- Emergency Alert Overlay -->
+                                <div v-if="isEmergency" class="absolute -inset-10 bg-red-500/20 z-0 animate-pulse rounded-[3rem]"></div>
                                 
-                                <div class="bg-[#FFF9F5] rounded-3xl p-5 mb-4 border border-orange-100/50">
-                                    <div class="flex justify-between items-end">
-                                        <div class="w-full">
-                                            <p class="text-sm text-textLight mb-1">健康信息摘要</p>
-                                            <div class="flex flex-wrap gap-2 mt-2">
-                                                <span class="px-3 py-1 rounded-full bg-white text-textDark text-sm font-medium border border-gray-100">72岁</span>
-                                                <span class="px-3 py-1 rounded-full bg-white text-textDark text-sm font-medium border border-gray-100">独居</span>
-                                                <span class="px-3 py-1 rounded-full bg-red-50 text-red-500 text-sm font-bold border border-red-100 flex items-center gap-1">
-                                                    <i class="ph-fill ph-warning-circle"></i> 高血压
-                                                </span>
-                                                <span class="px-3 py-1 rounded-full bg-orange-50 text-orange-500 text-sm font-bold border border-orange-100">
-                                                    膝盖痛
-                                                </span>
+                                <div class="bg-slate-900/90 backdrop-blur-md text-white p-6 rounded-[2rem] shadow-2xl relative z-10 border border-white/10">
+                                    <div class="flex items-center gap-4 mb-4">
+                                        <div :class="isEmergency ? 'bg-red-500 animate-bounce' : 'bg-orange-500 animate-pulse'" class="w-12 h-12 rounded-full flex items-center justify-center">
+                                            <i class="ph-fill ph-microphone text-2xl"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-slate-400">医依正在听...</p>
+                                            <p class="text-xl font-bold" :class="isEmergency ? 'text-red-400' : 'text-white'">{{ userTranscript }}</p>
+                                        </div>
+                                    </div>
+                                    <p class="text-slate-300 text-lg leading-relaxed border-t border-white/10 pt-4">{{ displayHeader }}</p>
+                                </div>
+                            </div>
+
+                            <!-- STEP 3: Escort Cards List (Swipeable) -->
+                            <div v-if="matchStep === 3" class="space-y-4 overflow-y-auto max-h-[60vh] pb-24 scroller pr-1 relative">
+                                <h3 v-if="matchMode === 'appointment'" class="text-center text-slate-500 font-bold mb-2 text-sm bg-white/50 py-1 rounded-full backdrop-blur">请选择一位陪诊员</h3>
+                                
+                                <!-- Card 1: Free -->
+                                <div @click="selectEscort('free')" class="cursor-pointer transition-transform hover:scale-[1.02] active:scale-95 shadow-md hover:shadow-xl rounded-2xl overflow-hidden mb-4">
+                                    <img :src="escortImages.free" @error="$event.target.src = fallbackImages.free" class="w-full h-auto object-cover block" alt="Volunteer Card" />
+                                </div>
+
+                                <!-- Card 2: Student -->
+                                <div @click="selectEscort('student')" class="cursor-pointer transition-transform hover:scale-[1.02] active:scale-95 shadow-md hover:shadow-xl rounded-2xl overflow-hidden mb-4">
+                                     <img :src="escortImages.student" @error="$event.target.src = fallbackImages.student" class="w-full h-auto object-cover block" alt="Student Card" />
+                                </div>
+
+                                <!-- Card 3: Pro -->
+                                <div @click="selectEscort('pro')" class="cursor-pointer transition-transform hover:scale-[1.02] active:scale-95 shadow-md hover:shadow-xl rounded-2xl overflow-hidden mb-4">
+                                     <img :src="escortImages.pro" @error="$event.target.src = fallbackImages.pro" class="w-full h-auto object-cover block" alt="Expert Card" />
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </transition>
+
+                <!-- 5. WAITING PHASE -->
+                <transition name="fade">
+                    <div v-if="appState === 'waiting'" class="absolute inset-0 flex flex-col bg-bg z-50 items-center justify-center p-8">
+                        <div class="w-[300px] bg-white rounded-3xl shadow-xl overflow-hidden relative mb-12 transform scale-100">
+                             <!-- Loading Ring Overlaid -->
+                             <div class="absolute -top-4 -right-4 w-12 h-12 border-4 border-orange-400 border-r-transparent rounded-full animate-spin z-50"></div>
+                             
+                            <img :src="escortImages[selectedEscort] || escortImages.free" @error="$event.target.src = fallbackImages[selectedEscort] || fallbackImages.free" class="w-full h-auto object-cover block" />
+                            
+                            <div class="bg-slate-900 text-white font-bold text-center py-2 text-sm">
+                                预计 5 分钟后到达
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white w-full rounded-[2rem] p-6 shadow-xl border border-slate-100 text-center space-y-4">
+                            <div class="w-12 h-12 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-2 animate-pulse">
+                                <i class="ph-fill ph-speaker-high text-2xl"></i>
+                            </div>
+                            <p class="text-xl text-slate-800 leading-relaxed font-medium">{{ displayHeader }}</p>
+                        </div>
+
+                        <button class="mt-8 text-slate-400 hover:text-red-500 transition-colors flex items-center gap-2 text-lg">
+                            <i class="ph-bold ph-phone"></i> 紧急呼叫 120
+                        </button>
+                    </div>
+                </transition>
+
+                <!-- 6. VISIT PHASE (陪诊视角) -->
+                <transition name="fade">
+                    <div v-if="appState === 'visit'" class="absolute inset-0 flex flex-col bg-bg z-50">
+                        <!-- Visit Header -->
+                        <div class="mt-14 px-6 mb-4 flex justify-between items-end relative z-10">
+                            <div>
+                                <div class="flex items-center gap-1">
+                                    <button @click="jumpTo('waiting')" class="text-slate-800 hover:text-primary transition-colors -ml-2 p-1">
+                                        <i class="ph-bold ph-caret-left text-2xl"></i>
+                                    </button>
+                                    <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                                        陪诊视角
+                                        <div class="w-2 h-2 bg-care rounded-full animate-pulse-slow"></div>
+                                    </h1>
+                                </div>
+                                <div class="text-xs text-slate-400 font-mono mt-1 pl-7 flex items-center gap-2">
+                                    <i class="ph-fill ph-clock"></i> {{ visitTimer }}
+                                </div>
+                            </div>
+                            <!-- Compliance Badge -->
+                            <div class="flex flex-col items-end">
+                                <div class="bg-slate-900 text-white px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 shadow-sm">
+                                    <div class="flex items-end gap-[2px] h-3">
+                                        <div class="w-0.5 bg-green-400 animate-wave rounded-full" style="animation-duration: 0.8s"></div>
+                                        <div class="w-0.5 bg-green-400 animate-wave rounded-full" style="animation-duration: 1.1s"></div>
+                                        <div class="w-0.5 bg-green-400 animate-wave rounded-full" style="animation-duration: 0.6s"></div>
+                                    </div>
+                                    全程静默存证
+                                </div>
+                                <span class="text-[10px] text-slate-400 mt-1 scale-90 origin-right">合规保护 · 不转文字</span>
+                            </div>
+                        </div>
+
+                        <!-- Visit Timeline -->
+                        <div class="flex-1 overflow-y-auto px-5 pb-36 scroller space-y-4 relative" ref="visitContainer">
+                            <!-- Welcome Msg -->
+                            <div class="text-center py-4">
+                                <span class="bg-black/5 text-slate-500 text-xs px-3 py-1 rounded-full">进入心内科诊室 09:52</span>
+                            </div>
+
+                            <!-- Dynamic Items -->
+                            <transition-group name="list">
+                                <div v-for="(item, index) in visitTimelineItems" :key="item.id" class="w-full animate-float-up">
+                                    
+                                    <!-- TYPE 1: Audio Marker -->
+                                    <div v-if="item.type === 'audio'" class="bg-white p-4 rounded-[1.5rem] shadow-sm border border-slate-100 flex gap-4 items-center">
+                                        <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
+                                            <i class="ph-fill ph-microphone text-blue-500 text-xl"></i>
+                                        </div>
+                                        <div class="flex-1">
+                                            <h4 class="font-bold text-slate-800 text-sm">重点对话已标记</h4>
+                                            <p class="text-slate-500 text-xs mt-0.5">医生语速较快，已为您自动定位时间轴。</p>
+                                        </div>
+                                        <span class="text-xs font-mono text-slate-300">{{ item.time }}</span>
+                                    </div>
+
+                                    <!-- TYPE 2: Vision Guidance -->
+                                    <div v-if="item.type === 'vision'" class="bg-white p-3 rounded-[1.5rem] shadow-md border border-sky-200/50 overflow-hidden relative">
+                                        <div class="flex items-center gap-3 mb-3 px-1 pt-1">
+                                            <div class="w-8 h-8 rounded-full bg-sky-400 text-white flex items-center justify-center">
+                                                <i class="ph-bold ph-magic-wand"></i>
+                                            </div>
+                                            <div>
+                                                <h4 class="font-bold text-slate-800 text-sm">识别结果：血常规检查单</h4>
+                                                <span class="text-xs text-sky-500 font-bold">已生成导诊路线</span>
+                                            </div>
+                                        </div>
+                                        <div class="bg-blue-50/50 rounded-xl p-3 flex gap-4 items-center border border-blue-100">
+                                            <div class="w-12 h-12 bg-white rounded-lg flex items-center justify-center text-sky-400 text-2xl border border-blue-100 shadow-sm">
+                                                <i class="ph-duotone ph-arrow-circle-up-right"></i>
+                                            </div>
+                                            <div>
+                                                <div class="text-xs text-slate-500 mb-0.5">下一步前往</div>
+                                                <div class="text-slate-900 font-bold">2楼 B区 采血窗口</div>
+                                                <div class="text-[10px] text-orange-500 mt-1 bg-orange-50 inline-block px-1.5 rounded py-0.5 border border-orange-100">
+                                                    <i class="ph-fill ph-warning-circle"></i> 需空腹
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- TYPE 3: Risk Alert -->
+                                    <div v-if="item.type === 'risk'" class="bg-red-50 p-4 rounded-[1.5rem] shadow-lg border border-red-100 relative overflow-hidden group">
+                                        <div class="absolute right-0 top-0 w-16 h-16 bg-red-100 rounded-bl-[3rem] -mr-4 -mt-4 z-0"></div>
+                                        <div class="relative z-10">
+                                            <div class="flex items-center gap-2 mb-2 text-red-500">
+                                                <i class="ph-fill ph-siren text-lg animate-pulse"></i> 
+                                                <span class="font-bold text-xs uppercase tracking-wider">用药安全提示</span>
+                                            </div>
+                                            <h3 class="text-slate-800 font-bold text-lg leading-tight mb-2">建议帮阿姨问一下...</h3>
+                                            <p class="text-slate-600 text-sm bg-white/60 p-3 rounded-xl border border-red-100/50 leading-relaxed">
+                                                "阿姨有<span class="font-bold text-red-500">慢性胃炎史</span>，这个药（阿司匹林）饭前吃会不会伤胃？"
+                                            </p>
+                                            <div class="mt-3 flex justify-end">
+                                                <button class="bg-white text-red-500 text-xs font-bold px-3 py-1.5 rounded-full shadow-sm border border-red-100 active:scale-95 transition-transform flex items-center gap-1">
+                                                    <i class="ph-bold ph-read-cv-logo"></i> 
+                                                    查看来源：2023年胃镜报告
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
+                            </transition-group>
+                            <div class="h-8"></div>
+                        </div>
 
-                                <div class="flex gap-3">
-                                    <button class="flex-1 py-4 bg-gray-100 rounded-full text-textLight font-medium text-sm">修改信息</button>
-                                    <button class="flex-1 py-4 bg-primary text-white rounded-full font-bold shadow-lg shadow-primary/30 text-sm flex items-center justify-center gap-2">
-                                        确认完成
+                        <!-- Scanner Overlay -->
+                        <transition name="fade">
+                            <div v-if="showVisitScanner" class="absolute inset-0 z-40 bg-black/90 flex flex-col items-center justify-center">
+                                <div class="relative w-72 h-96 border-2 border-white/30 rounded-3xl overflow-hidden">
+                                    <div class="absolute inset-0 bg-gradient-to-b from-sky-400/20 to-transparent animate-scan h-1/2 w-full border-b-2 border-sky-400 shadow-lg shadow-sky-400/50"></div>
+                                    <div class="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-sky-400 rounded-tl-xl"></div>
+                                    <div class="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-sky-400 rounded-tr-xl"></div>
+                                    <div class="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-sky-400 rounded-bl-xl"></div>
+                                    <div class="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-sky-400 rounded-br-xl"></div>
+                                    <div class="absolute bottom-4 left-0 w-full text-center text-white/80 font-mono text-sm">正在解析医疗单据...</div>
+                                </div>
+                                <button @click="finishVisitScan" class="mt-8 bg-white/10 backdrop-blur border border-white/20 text-white rounded-full w-16 h-16 flex items-center justify-center text-2xl hover:bg-white/20 transition-all">
+                                    <i class="ph-fill ph-camera"></i>
+                                </button>
+                            </div>
+                        </transition>
+
+                        <!-- Bottom Action Panel -->
+                        <div class="absolute bottom-0 left-0 w-full p-4 z-30">
+                            <div class="glass-panel w-full rounded-[2.5rem] p-4 shadow-[0_8px_32px_rgba(0,0,0,0.12)] border-t border-white">
+                                
+                                <!-- Mode A: During Visit -->
+                                <div v-if="!visitEnded" class="grid grid-cols-4 gap-2">
+                                    <button @click="addVisitAudioMarker" class="btn-press flex flex-col items-center gap-1 group">
+                                        <div class="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-600 shadow-sm border border-slate-200 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors">
+                                            <i class="ph-fill ph-waveform text-2xl"></i>
+                                        </div>
+                                        <span class="text-[10px] font-bold text-slate-500">标记重点</span>
+                                    </button>
+                                    <button @click="startVisitScan" class="btn-press flex flex-col items-center gap-1 group">
+                                        <div class="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-600 shadow-sm border border-slate-200 group-hover:bg-sky-50 group-hover:text-sky-500 transition-colors">
+                                            <i class="ph-fill ph-scan text-2xl"></i>
+                                        </div>
+                                        <span class="text-[10px] font-bold text-slate-500">划就医流程</span>
+                                    </button>
+                                    <button @click="checkVisitDrug" class="btn-press flex flex-col items-center gap-1 group">
+                                        <div class="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-600 shadow-sm border border-slate-200 group-hover:bg-red-50 group-hover:text-red-500 transition-colors">
+                                            <i class="ph-fill ph-pill text-2xl"></i>
+                                        </div>
+                                        <span class="text-[10px] font-bold text-slate-500">辅助问诊</span>
+                                    </button>
+                                    <button @click="endVisitSession" class="btn-press flex flex-col items-center gap-1">
+                                        <div class="w-14 h-14 rounded-2xl bg-slate-900 flex items-center justify-center text-white shadow-lg shadow-slate-900/20">
+                                            <i class="ph-bold ph-power text-xl text-red-400"></i>
+                                        </div>
+                                        <span class="text-[10px] font-bold text-slate-800">结束</span>
                                     </button>
                                 </div>
+
+                                <!-- Mode B: Post Visit -->
+                                <div v-else class="animate-pop w-full text-center">
+                                    <div class="mb-4">
+                                        <h3 class="text-slate-800 font-bold text-lg">就诊已结束</h3>
+                                        <p class="text-slate-500 text-xs text-center mx-auto px-4 mt-1">
+                                            AI 已自动生成本次就诊的备忘录。录音存证已上传云端加密保险箱。
+                                        </p>
+                                    </div>
+                                    <div class="bg-white/50 border border-white rounded-2xl p-3 mb-4 flex items-center justify-between">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-10 h-10 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
+                                                <i class="ph-fill ph-calendar-plus text-xl"></i>
+                                            </div>
+                                            <div class="text-left">
+                                                <div class="text-xs text-slate-400">设置复诊提醒</div>
+                                                <div class="font-bold text-slate-800 text-sm">2026年1月25日 (周日)</div>
+                                            </div>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" checked class="sr-only peer">
+                                            <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                                        </label>
+                                    </div>
+                                    <button @click="confirmVisitEnd" class="w-full bg-slate-900 text-white py-4 rounded-xl font-bold shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2">
+                                        <i class="ph-bold ph-check-circle"></i> 确认并归档
+                                    </button>
+                                </div>
+
                             </div>
                         </div>
-                    </transition>
+                    </div>
+                </transition>
 
+                <!-- Disclaimer (Inside Phone Overlay) -->
+                <div class="absolute bottom-4 left-0 w-full text-center z-[60] pointer-events-none">
+                    <p class="text-slate-400 text-[10px] opacity-80">*服务仅限非医疗性质的基础陪诊，AI内容不构成诊疗建议，请遵医嘱。</p>
                 </div>
-            </transition>
+            </div>
         </div>
     </div>
 
-    <!-- Vue Application Logic -->
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <!-- Load Environment Variables -->
-    <script src="env.js"></script>
-    
-    <script>
-        const { createApp, ref, onMounted, nextTick, computed } = Vue
+    <!-- Configuration -->
+    <script src="env.js" onerror="console.log('env.js not found, using fallback TTS')"></script>
+
+    <!-- Logic Script -->
+    <script type="module">
+        // Safe Env Loader - Graceful fallback when env.js is missing
+        const RAW_ENV = window.MINIMAX_ENV || {};
+        const ENV = {
+            zhipu_api_key: RAW_ENV.ZHIPU_API_KEY || '',
+            minimax_api_key: RAW_ENV.API_KEY || '',
+            minimax_group_id: RAW_ENV.GROUP_ID || '',
+            minimax_model_id: "speech-02-turbo",
+            minimax_voice_id: RAW_ENV.VOICE_ID || "female-chengshu",
+            // Check if TTS API is properly configured
+            get hasTTSConfig() {
+                return this.minimax_api_key && this.minimax_api_key.length > 10 && this.minimax_group_id;
+            }
+        };
+
+        const { createApp } = Vue;
 
         createApp({
-            setup() {
-                // ==========================================
-                // 配置加载逻辑
-                // ==========================================
-                const env = window.MINIMAX_ENV || {};
-                
-                const MINIMAX_CONFIG = {
-                    GROUP_ID: env.GROUP_ID || "",
-                    API_KEY: env.API_KEY || "",
-                    VOICE_ID: env.VOICE_ID || "female-chengshu",
-                    MODEL_ID: env.MODEL_ID || "speech-01-turbo",
-                }
-
-                // Check for keys
-                const missingKeys = computed(() => {
-                    return !MINIMAX_CONFIG.API_KEY || !MINIMAX_CONFIG.GROUP_ID
-                })
-
-                // State
-                const currentStep = ref(1)
-                const userName = ref('')
-                const currentAudio = ref(null) // 追踪当前的音频对象以防止重叠
-
-                
-                // Step 1 State
-                const registerState = ref('idle') // idle, listening
-                const registerTranscript = ref('')
-
-                // Step 2 State
-                const orbState = ref('idle') // idle, listening, processing, finished
-                const transcript = ref('')
-                const showResultCard = ref(false)
-
-                // New logic for multi-turn interview
-                const interviewStep = ref(0) // 0: Age, 1: History, 2: Family, 3: Current
-                const stepHintText = computed(() => {
-                    const hints = [
-                        "点击回答 年龄",
-                        "点击回答 既往病史",
-                        "点击回答 家庭情况",
-                        "点击回答 近期状况"
-                    ]
-                    return hints[interviewStep.value] || "点击继续"
-                })
-
-                // Methods for Step 1
-                const startRegister = () => {
-                    registerState.value = 'listening'
-                    speak('您好，我是医疗助手依依。请问您怎么称呼？')
-                    
-                    // Simulate Listening
-                    setTimeout(() => {
-                        // Typing effect for name
-                        const name = "张阿姨"
-                        let i = 0
-                        const typeName = setInterval(() => {
-                            registerTranscript.value = "我是" + name.substring(0, i+1)
-                            i++
-                            if(i >= name.length) {
-                                clearInterval(typeName)
-                                // Complete registration
-                                setTimeout(() => {
-                                    userName.value = "张阿姨"
-                                    completeRegistration()
-                                }, 1000)
-                            }
-                        }, 200)
-                    }, 2500) // Wait for TTS to finish roughly
-                }
-
-                const completeRegistration = () => {
-                    currentStep.value = 2
-                    // Auto-greeting in Step 2: Modified for Health Profile Context
-                    setTimeout(() => {
-                        speak(`下午好，张阿姨。听您的声音听得出来您身体还很硬朗呢。为了以后能更好地照顾您，我需要完善一下您的健康档案。首先，请问您今年高寿了？`)
-                    }, 800)
-                }
-
-                // Methods for Step 2
-                const clickOrb = () => {
-                    if (orbState.value !== 'idle') return
-                    
-                    // Start simulation sequence
-                    startListeningSimulation()
-                }
-
-                const startListeningSimulation = () => {
-                    orbState.value = 'listening'
-                    
-                    // Define conversation flow
-                    const dialogs = [
-                        { q: "年龄?", ans: "我今年72了。", nextQ: "72岁，很有福气的年纪。那您以前有过什么确诊的慢性病吗？比如高血压、糖尿病之类的？" },
-                        { q: "病史?", ans: "就有时候血压有点高，吃着药呢。", nextQ: "好的，高血压要注意监测。不知您现在和谁一起住？老伴或者子女在身边吗？" },
-                        { q: "家庭?", ans: "老伴走的早，儿子在上海工作，平时就我一个人。", nextQ: "一个人生活要多注意安全。最后，最近身体有什么特别不舒服的地方吗？" },
-                        { q: "现状?", ans: "也没啥大毛病，就是阴天下雨膝盖疼。", nextQ: "记下来了。张阿姨，您的健康档案已经建好了。以后如果您觉得身体不舒服，或者去医院看病怕麻烦、想找人陪着，就直接打开小程序叫我。医依会一直陪着您的。" }
-                    ]
-
-                    const currentDialog = dialogs[interviewStep.value]
-                    if (!currentDialog) return
-
-                    // Stop previous TTS
-                    if ('speechSynthesis' in window) window.speechSynthesis.cancel()
-
-                    // Simulate speech-to-text with typewriter effect
-                    const targetText = currentDialog.ans
-                    let charIndex = 0
-                    
-                    transcript.value = "" // Clear previous text
-
-                    // Fake latency before "talking" starts
-                    setTimeout(() => {
-                        const typeInterval = setInterval(() => {
-                            if (charIndex < targetText.length) {
-                                transcript.value += targetText.charAt(charIndex)
-                                charIndex++
-                            } else {
-                                clearInterval(typeInterval)
-                                // Finished speaking, move to processing
-                                setTimeout(() => processStep(currentDialog.nextQ), 800)
-                            }
-                        }, 100)
-                    }, 800)
-                }
-
-                const processStep = (nextQuestionText) => {
-                    orbState.value = 'processing'
-                    
-                    // Mock processing time
-                    setTimeout(() => {
-                        orbState.value = 'idle'
-                        
-                        // Speak next question or final conclusion
-                        speak(nextQuestionText)
-                        
-                        // Advance step
-                        interviewStep.value++
-
-                        // Check if finished
-                        if (interviewStep.value >= 4) {
-                             setTimeout(() => {
-                                orbState.value = 'finished'
-                                showResultCard.value = true
-                             }, 14000) // Give time for the long final speech
-                        }
-
-                    }, 1500)
-                }
-
-
-                const speak = async (text) => {
-                    // 1. 停止之前的音频或语音
-                    if (currentAudio.value) {
-                        currentAudio.value.pause();
-                        currentAudio.value.currentTime = 0;
-                    }
-                    if ('speechSynthesis' in window) {
-                        window.speechSynthesis.cancel();
-                    }
-
-                    // 2. 尝试使用 MiniMax API
-                    if (!missingKeys.value) {
-                        try {
-                            console.log(`Calling MiniMax TTS... (Voice: ${MINIMAX_CONFIG.VOICE_ID}, Model: ${MINIMAX_CONFIG.MODEL_ID})`);
-                            // 更新为最新的 V2 接口地址
-                            const url = `https://api.minimax.chat/v1/t2a_v2?GroupId=${MINIMAX_CONFIG.GROUP_ID}`;
-                            const response = await fetch(url, {
-                                method: 'POST',
-                                headers: {
-                                    'Authorization': `Bearer ${MINIMAX_CONFIG.API_KEY}`,
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({
-                                    model: MINIMAX_CONFIG.MODEL_ID,
-                                    text: text,
-                                    stream: false, // 显式关闭流式传输
-                                    voice_setting: {
-                                        voice_id: MINIMAX_CONFIG.VOICE_ID,
-                                        speed: 1.0,
-                                        vol: 1.0,
-                                        pitch: 0
-                                    },
-                                    audio_setting: { // 增加音频原有设定以防万一，虽然v2可能不强求
-                                        sample_rate: 32000,
-                                        bitrate: 128000,
-                                        format: "mp3",
-                                        channel: 1
-                                    }
-                                })
-                            });
-
-                            if (!response.ok) {
-                                throw new Error(`MiniMax API Error: ${response.status}`);
-                            }
-
-                            // 解析 MiniMax 的 JSON 响应
-                            const jsonResponse = await response.json();
-                            
-                            // 检查业务状态码
-                            if (jsonResponse.base_resp && jsonResponse.base_resp.status_code !== 0) {
-                                throw new Error(`MiniMax Service Error: ${jsonResponse.base_resp.status_msg}`);
-                            }
-
-                            // 提取音频数据 (Hex 字符串) 并转换为 Blob
-                            const hexAudio = jsonResponse.data.audio;
-                            if (!hexAudio) {
-                                throw new Error("No audio data received");
-                            }
-
-                            // Hex String -> Uint8Array
-                            const matches = hexAudio.match(/.{1,2}/g);
-                            const buffer = new Uint8Array(matches.map(byte => parseInt(byte, 16)));
-                            const blob = new Blob([buffer], { type: 'audio/mpeg' });
-
-                            const audioUrl = URL.createObjectURL(blob);
-                            const audio = new Audio(audioUrl);
-                            currentAudio.value = audio;
-                            
-                            // 播放并在结束时释放资源
-                            audio.onended = () => {
-                                URL.revokeObjectURL(audioUrl);
-                                currentAudio.value = null; // Reset state
-                            };
-                            
-                            await audio.play();
-                            return; // 成功播放，退出函数
-                        } catch (e) {
-                            console.warn("MiniMax 调用失败，降级使用浏览器 TTS:", e);
-                            // 失败后继续向下执行，使用浏览器兜底
-                        }
-                    }
-
-                    // 3. 浏览器原生 TTS 兜底
-                    if ('speechSynthesis' in window) {
-                        const utterance = new SpeechSynthesisUtterance(text);
-                        utterance.lang = 'zh-CN';
-                        utterance.rate = 0.9;
-                        window.speechSynthesis.speak(utterance);
-                    }
-                }
-
-                // Preload voices
-                onMounted(() => {
-                    if ('speechSynthesis' in window) {
-                        window.speechSynthesis.getVoices()
-                    }
-                })
-
+            data() {
                 return {
-                    currentStep,
-                    userName,
-                    registerState,
-                    registerTranscript,
-                    orbState,
-                    transcript,
-                    showResultCard,
-                    startRegister,
-                    clickOrb,
-                    missingKeys,
-                    stepHintText // Export computed
+                    // App Flow
+                    appState: 'splash', 
+                    showResultCards: false,
+
+                    // Conversation State
+                    displayHeader: "", 
+                    userTranscript: "",
+                    orbState: 'idle', 
+                    statusText: "",
+                    turnCount: 0,
+                    maxTurns: 3, // Limit to 3-5 turns for demo
+
+                    // Matching State
+                    matchStep: 0, // 0:Choice, 1:Listening, 2:Analyzing, 3:Cards, 4:ApptInfo
+                    matchMode: 'realtime', // 'realtime' or 'appointment'
+                    isEmergency: false,
+                    selectedEscort: null,
+
+                    // System Dashboard Data
+                    systemLogs: [],
+                    extractedTags: {}, // tag: value
+                    metrics: { pro: 10, str: 10, emp: 10 },
+                    matchStatus: 0,
+                    isThinking: false,
+                    thinkingText: "",
+
+                    // Escort Avatars (Change these URLs to real images)
+                    escortImages: {
+                        free: 'assets/assets/assets/card_volunteer.png',    // 1. 志愿者整张卡片
+                        student: 'assets/assets/assets/card_student.png',   // 2. 学生整张卡片
+                        pro: 'assets/assets/assets/card_pro.png'            // 3. 专家整张卡片
+                    },
+                    fallbackImages: {
+                        free: 'https://placehold.co/600x200/e2e8f0/475569?text=Volunteer+Card',
+                        student: 'https://placehold.co/600x200/e2e8f0/475569?text=Student+Card',
+                        pro: 'https://placehold.co/600x200/e2e8f0/475569?text=Pro+Card'
+                    },
+
+                    // Audio
+                    mediaRecorder: null,
+                    audioChunks: [],
+                    audioContext: null,
+                    
+                    // Map
+                    mapInstance: null,
+
+                    // Visit State (陪诊视角)
+                    visitTimelineItems: [],
+                    showVisitScanner: false,
+                    visitEnded: false,
+                    visitIdCounter: 0,
+                    visitTimer: '00:24:15',
+                }
+            },
+            mounted() {
+                // Splash Timer
+                setTimeout(() => {
+                    if(this.appState === 'splash') this.appState = 'intro';
+                }, 2500);
+
+                this.log('Matcher Engine initialized', 'info');
+            },
+            methods: {
+                
+                async startConversation() {
+                    // Init Audio Context
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    this.appState = 'conversation';
+                    this.turnCount = 1;
+                    
+                    const greetingText = "我是医依。请问您这次去医院主要是想看什么病？或者有什么不舒服？";
+                    this.displayHeader = greetingText;
+                    this.log('Assessment Session Started.', 'info');
+                    
+                    // FIX: Generate TTS for greeting instead of loading missing mp3
+                    // This also warms up the TTS engine immediately
+                    await this.playTTS(greetingText);
+                },
+
+                startListening() {
+                    if(this.showResultCards) return; 
+
+                    this.orbState = 'listening';
+                    this.statusText = "正在聆听 (模拟输入)...";
+                    
+                    // ============================================
+                    // SIMULATION MODE (No Mic Required)
+                    // ============================================
+                    // Simulate user speaking time (Slower for demo)
+                    setTimeout(() => {
+                        this.stopListening();
+                    }, 4000);
+                },
+
+                stopListening() {
+                    this.orbState = 'processing';
+                    this.statusText = "正在分析...";
+                    
+                    // Simulate processing delay then process
+                    setTimeout(() => {
+                        this.processAudioInput();
+                    }, 2000);
+                },
+
+                async processAudioInput() {
+                    this.isThinking = true;
+                    this.thinkingText = "Extracting Requirements...";
+                    
+                    // ============================================
+                    // DEMO SCRIPT LOGIC (MOCKED STT & INTENT)
+                    // ============================================
+                    // We simulate different inputs based on turn count to tell a cohesive story.
+                    
+                    let recognizedText = "";
+                    let aiResponseText = "";
+                    
+                    if (this.turnCount === 1) {
+                        // Turn 1: User states condition
+                        recognizedText = "我最近总是觉得心慌，有时候喘不上气，想去心内科看看。";
+                        this.log('Tag: Department = Cardiology', 'match');
+                        this.log('Tag: Symptom = Palpitations', 'info');
+                        this.extractedTags['科室'] = '心内科';
+                        this.extractedTags['主诉'] = '心慌/气短';
+                        this.metrics.pro = 60; 
+                        this.matchStatus = 120;
+                        this.userTranscript = recognizedText;
+                        
+                        // Fake LLM Response
+                        aiResponseText = "收到。那您今年多大年纪了？平时走路腿脚方便吗？";
+                    } 
+                    else if (this.turnCount === 2) {
+                        // Turn 2: User states mobility
+                        recognizedText = "我今年72了。哎呀，老了，腿脚不太利索，走快了就喘。";
+                        this.log('Tag: Age = 72', 'match');
+                        this.log('Tag: Mobility = Low', 'alert');
+                        this.extractedTags['年龄'] = '72岁';
+                        this.extractedTags['行动'] = '需搀扶';
+                        this.metrics.str = 85; // Need strength
+                        this.matchStatus = 45; // Narrowing down
+                        this.userTranscript = recognizedText;
+
+                        // Fake LLM Response
+                        aiResponseText = "明白了。那这次就诊，是一个人去还是有家人陪同？您希望陪诊员是个什么样性格的人？";
+                    }
+                    else if (this.turnCount === 3) {
+                        // Turn 3: User states emotional need
+                        recognizedText = "孩子们都忙，我一个人去。我这一见医生就紧张，话都说不利索，想要个耐心点的。";
+                        this.log('Tag: Companion = Solo', 'info');
+                        this.log('Tag: Emotion = Anxiety', 'match');
+                        this.extractedTags['性格需求'] = '耐心/安抚';
+                        this.metrics.emp = 95; // High empathy needed
+                        this.matchStatus = 5; // Found 5 matches
+                        this.userTranscript = recognizedText;
+
+                        // AI Asks for Special Requirements
+                        aiResponseText = "收到，我们会为您安排一位耐心细致的陪诊员。除此之外，由于医院环境复杂，您对陪诊员还有什么其他特殊要求吗？比如性别、方言，或者是否需要轮椅服务？";
+                    }
+                    else if (this.turnCount === 4) {
+                        // Turn 4: User states special requirements (New Phase)
+                        recognizedText = "哦对了，我只会说家乡话，普通话听不太懂，最好找个会说本地话的本地人。另外我是女同志，不想让男同志陪着，不方便。";
+                        this.log('Tag: Language = Local Dialect', 'match');
+                        this.log('Tag: Gender = Female Only', 'match');
+                        this.extractedTags['语言要求'] = '本地方言';
+                        this.extractedTags['性别偏好'] = '限女性';
+                        
+                        // Update metrics slightly
+                        this.matchStatus = 2; // Filtered down to 2 perfect matches
+                        this.userTranscript = recognizedText;
+
+                        aiResponseText = "好的，这就为您筛选会说本地方言的女性陪诊专家。所有需求均已记录，正在生成您的就诊档案，请稍候。";
+                    }
+
+                    // Trigger "LLM" call visuals
+                    this.turnCount++;
+                    
+                    // Simulate Latency (Thinking time)
+                    setTimeout(async () => {
+                        this.displayHeader = ""; // clear for typing effect
+                        this.isThinking = false;
+                        
+                        // If it's the real app, we would call callLLM(recognizedText) here.
+                        // For Hackathon Demo reliability, we proceed with the scripted text.
+                        this.displayHeader = aiResponseText;
+                        
+                        // Synthesize Voice
+                        await this.playTTS(aiResponseText);
+
+                        // If finished, show cards
+                        if (this.turnCount > 4) {
+                            setTimeout(() => {
+                                this.showResultCards = true;
+                                this.log('Assessment Complete. generated [Doctor_Brief_Card] & [Companion_Persona]', 'success');
+                                this.orbState = 'idle';
+                                this.statusText = "已完成";
+                            }, 3000); 
+                        }
+                    }, 2500);
+                },
+
+                // ==========================
+                // MATCHING PHASE LOGIC
+                // ==========================
+                
+                async startMatchPhase() {
+                    // Transition to Map View
+                    this.showResultCards = false;
+                    this.appState = 'matching';
+                    this.matchStep = 0;
+                    this.log('Entered [Real-time Matching] Phase', 'info');
+
+                    // Map is initialized by @after-enter on transition
+                    
+                    const prompt = "档案已为您建好。请问您是需要现在立刻陪诊，还是预约之后的陪诊？";
+                    await this.playTTS(prompt);
+                },
+
+                initMap() {
+                    // Clean up if exists
+                    if (this.mapInstance) {
+                        this.mapInstance.remove();
+                        this.mapInstance = null;
+                    }
+
+                    this.$nextTick(() => {
+                        const mapEl = document.getElementById('map-container');
+                        if (!mapEl) return;
+
+                        // Haidian District, Beijing Coordinates (Near Zhongguancun)
+                        const center = [39.9788, 116.3025]; 
+                        
+                        this.mapInstance = L.map('map-container', {
+                            zoomControl: false,
+                            attributionControl: false
+                        }).setView(center, 13); // Zoom level
+
+                         // Dark/Light Mode Map Style (CartoDB Voyager)
+                        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                            maxZoom: 20
+                        }).addTo(this.mapInstance);
+
+                        // User Location Marker (Pulse Icon)
+                        const userIcon = L.divIcon({
+                            className: 'custom-div-icon',
+                            html: `<div class="w-6 h-6 bg-blue-500 rounded-full border-2 border-white shadow-lg animate-pulse relative z-50"></div>`,
+                            iconSize: [24, 24],
+                            iconAnchor: [12, 12]
+                        });
+                        L.marker(center, {icon: userIcon, zIndexOffset: 1000 }).addTo(this.mapInstance);
+
+                        // Generate Many Escort Markers (Populate the map)
+                        const escorts = [];
+                        // Add some fixed points for deterministic demo nearby
+                        escorts.push({ lat: 39.982, lng: 116.305, type: 'free' });
+                        escorts.push({ lat: 39.975, lng: 116.298, type: 'student' });
+                        escorts.push({ lat: 39.980, lng: 116.310, type: 'pro' });
+
+                        // Add 30 random points to make it look busy
+                        for(let i=0; i<30; i++) {
+                            escorts.push({
+                                lat: center[0] + (Math.random() - 0.5) * 0.08, 
+                                lng: center[1] + (Math.random() - 0.5) * 0.08,
+                                type: ['free', 'student', 'pro'][Math.floor(Math.random()*3)]
+                            });
+                        }
+
+                        escorts.forEach(e => {
+                            let color = e.type === 'free' ? 'bg-green-500' : (e.type === 'student' ? 'bg-blue-400' : 'bg-orange-500');
+                            // Add white border and shadow to make them pop out
+                            let icon = L.divIcon({
+                                className: 'custom-div-icon',
+                                html: `<div class="w-4 h-4 ${color} rounded-full border-2 border-white shadow-md transition-transform hover:scale-125 cursor-pointer"></div>`,
+                                iconSize: [16, 16]
+                            });
+                            L.marker([e.lat, e.lng], {icon: icon}).addTo(this.mapInstance);
+                        });
+                        
+                        // Force resize to fix grey tiles issues
+                        setTimeout(() => this.mapInstance.invalidateSize(), 500);
+                    });
+                },
+
+                async startRealTimeMatch() {
+                    this.matchStep = 1; // Show listening UI
+                    this.matchMode = 'realtime';
+                    this.log('User Value Selection: Real-time', 'info');
+
+                    // AI Asks
+                    const q2 = "好的，为您开启实时响应模式。请问您现在身体感觉怎么样？有什么特别不舒服的吗？";
+                    await this.playTTS(q2);
+
+                    // Simulate Listen
+                    this.userTranscript = "";
+                    setTimeout(() => {
+                        this.userTranscript = "我现在头特别晕，感觉天旋地转的，站都站不稳，心跳也很快...";
+                        // Wait a bit then analyze
+                        setTimeout(() => this.analyzeRisk(), 2000);
+                    }, 4000);
+                },
+
+                // NEW: Appointment Logic
+                async startAppointmentMatch() {
+                    this.matchMode = 'appointment';
+                    this.log('User Value Selection: Appointment', 'info');
+                    
+                    // Step 1: Ask Info First (Before showing list)
+                    this.matchStep = 1; // Show listening UI
+                    const q_date = "好的，为您开启预约模式。请问您想预约哪天，去北京市哪家医院？";
+                    await this.playTTS(q_date);
+
+                    // Step 2: Simulate User Answer
+                    this.userTranscript = "";
+                    setTimeout(() => {
+                        this.userTranscript = "明天上午9点，想去北医三院。";
+                        
+                        setTimeout(async () => {
+                            const conf = "收到。已为您筛选出熟悉北医三院的陪诊员，请选择。";
+                            await this.playTTS(conf);
+
+                            // Step 3: Show Cards
+                            this.matchStep = 3; 
+                        }, 2000);
+                    }, 4000);
+                },
+
+                async analyzeRisk() {
+                    this.matchStep = 2; // Analyzing
+                    
+                    // Logic: Simulate High Risk Detection
+                    // In a real app, this would use LLM to classify intent
+                    const isHighRisk = (this.matchMode === 'realtime'); // Force high risk for demo purpose in Realtime mode
+
+                    if(isHighRisk) {
+                        this.isEmergency = true;
+                        this.log('RISK ALERT: Vertigo + Tachycardia detected!', 'alert');
+                        
+                        // Play Alert Sound (optional, simulate via logging/visuals)
+                        // Flash Red Screen
+                        
+                        setTimeout(async () => {
+                            this.displayHeader = "检测到您可能处于高风险状态！即刻为您匹配最近的急救资质陪诊员。";
+                            await this.playTTS(this.displayHeader);
+                            
+                            // Visual transition of auto-selection
+                            this.matchStep = 3;
+                            
+                            // Auto select after brief delay
+                            setTimeout(() => {
+                                this.selectEscort('pro'); // Auto select Pro/Fastest
+                            }, 3000);
+                        }, 2000);
+
+                    } else {
+                        // Normal flow
+                        this.displayHeader = "好的，已确认您的位置和状态。为您找到附近 3 位陪诊员。";
+                         await this.playTTS(this.displayHeader);
+                        this.matchStep = 3;
+                    }
+                },
+
+                async selectEscort(type) {
+                    this.log(`Escort Selected: ${type}`, 'success');
+
+                    // Branch Logic
+                    if (this.matchMode === 'appointment') {
+                         this.completeAppointmentMatch(type);
+                    } else {
+                         this.completeRealTimeMatch(type);
+                    }
+                },
+
+                async completeAppointmentMatch(type) {
+                    this.selectedEscort = type;
+                    // Map type to name for display
+                    const nameMap = { 'free': '李志愿者', 'student': '王同学', 'pro': '张护师' };
+                    const name = nameMap[type] || '陪诊员';
+
+                    const conf = `好的，已为您预约明天上午9点北医三院的${name}。订单已生成，请留意手机短信。`;
+                    await this.playTTS(conf);
+
+                    // Finish
+                    setTimeout(() => {
+                        this.appState = 'waiting';
+                        this.displayHeader = `预约已确认：明日 09:00 北医三院 (${name})`;
+                    }, 5000);
+                },
+
+                async completeRealTimeMatch(type) {
+                    this.selectedEscort = type;
+                    // Transition to Waiting
+                    this.appState = 'waiting';
+                    
+                    const waitText = "李志愿者距您 800米，预计 5 分钟后到达。请您找个安全的地方坐下，保持电话畅通。如有不适加剧，请直接让我帮您拨打120。";
+                    this.displayHeader = waitText; // For subtitle
+                    await this.playTTS(waitText);
+                },
+
+                async playTTS(text) {
+                    this.orbState = 'speaking';
+                    this.statusText = "医依正在说话...";
+                    
+                    // Check if MiniMax API is configured
+                    if (!ENV.hasTTSConfig) {
+                        this.log("TTS API not configured, using browser fallback", 'info');
+                        await this.playBrowserTTS(text);
+                        return;
+                    }
+                    
+                    try {
+                        this.log(`TTS Request: ${ENV.minimax_model_id}`, 'info'); 
+                        
+                        const res = await fetch(`https://api.minimax.chat/v1/text_to_speech?GroupId=${ENV.minimax_group_id}`, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "Authorization": `Bearer ${ENV.minimax_api_key}`
+                            },
+                            body: JSON.stringify({
+                                voice_id: ENV.minimax_voice_id, 
+                                text: text,
+                                model: ENV.minimax_model_id
+                            })
+                        });
+
+                        // Security Check: Did we get JSON (Error) instead of Audio?
+                        const contentType = res.headers.get("content-type");
+                        if (contentType && contentType.includes("application/json")) {
+                            const jsonErr = await res.json();
+                            throw new Error(`MiniMax API Error: ${JSON.stringify(jsonErr)}`);
+                        }
+                        
+                        if (!res.ok) {
+                            const errText = await res.text();
+                            throw new Error(`API HTTP Error: ${res.status} ${errText}`);
+                        }
+                        
+                        // Force Metadata for Browser Compatibility (macOS/iOS)
+                        const blob = await res.blob();
+                        const audioBlob = new Blob([blob], { type: 'audio/mpeg' });
+                        const url = URL.createObjectURL(audioBlob);
+                        
+                        await this.playAudio(url);
+                    } catch (e) {
+                        this.log("TTS API Error, using browser fallback: " + e.message, 'alert');
+                        console.error("TTS Detailed Error:", e);
+                        // Fallback to browser TTS
+                        await this.playBrowserTTS(text);
+                    }
+                    
+                    // Only resume if we are not in special states
+                    if(!this.showResultCards && this.appState === 'conversation') {
+                        this.orbState = 'idle';
+                        this.statusText = "";
+                        
+                        // Add gap before User starts speaking
+                        await new Promise(r => setTimeout(r, 2000));
+                        this.startListening();
+                    } else if (this.appState !== 'conversation') {
+                        this.orbState = 'idle'; // Reset orb
+                    }
+                },
+                
+                // Browser native TTS fallback (no API key needed)
+                async playBrowserTTS(text) {
+                    return new Promise((resolve) => {
+                        if ('speechSynthesis' in window) {
+                            // Cancel any ongoing speech
+                            window.speechSynthesis.cancel();
+                            
+                            const utterance = new SpeechSynthesisUtterance(text);
+                            utterance.lang = 'zh-CN';
+                            utterance.rate = 0.9;
+                            utterance.pitch = 1.0;
+                            
+                            // Try to find a Chinese voice
+                            const voices = window.speechSynthesis.getVoices();
+                            const zhVoice = voices.find(v => v.lang.includes('zh') || v.lang.includes('CN'));
+                            if (zhVoice) {
+                                utterance.voice = zhVoice;
+                            }
+                            
+                            utterance.onend = () => resolve();
+                            utterance.onerror = () => resolve();
+                            
+                            window.speechSynthesis.speak(utterance);
+                        } else {
+                            // No TTS available, wait to simulate speaking
+                            this.log("Browser TTS not available", 'alert');
+                            setTimeout(resolve, Math.min(text.length * 100, 5000));
+                        }
+                    });
+                },
+
+                // ==========================
+                // DEV / DEBUG INTERFACE
+                // ==========================
+                reloadApp() {
+                    window.location.reload();
+                },
+
+                jumpTo(scene) {
+                    // 1. Reset Common States
+                    if(window.speechSynthesis) window.speechSynthesis.cancel();
+                    this.showResultCards = false;
+                    this.matchStep = 0;
+                    this.isEmergency = false;
+                    this.orbState = 'idle';
+                    this.statusText = "";
+                    this.selectedEscort = null;
+
+                    // 2. Scene Switch
+                    switch(scene) {
+                        case 'intro':
+                            this.appState = 'intro';
+                            break;
+                        
+                        case 'conversation':
+                            this.appState = 'conversation';
+                            this.turnCount = 1;
+                            this.displayHeader = "我是医依。请问您这次去医院主要是想看什么病？或者有什么不舒服？";
+                            break;
+
+                        case 'results':
+                            this.appState = 'conversation';
+                            this.showResultCards = true;
+                            // Fill simulated data
+                            this.metrics = { pro: 60, str: 85, emp: 95 };
+                            this.extractedTags = { '科室': '心内科', '主诉': '心慌/气短', '年龄': '72岁', '行动': '需搀扶', '性格': '耐心', '语言': '本地方言', '性别': '限女性' };
+                            this.matchStatus = 2;
+                            break;
+
+                        case 'matching':
+                            this.appState = 'matching';
+                            this.matchStep = 0;
+                            // Manually init map if jumping directly
+                            setTimeout(() => this.initMap(), 500);
+                            break;
+
+                        case 'risk':
+                            this.appState = 'matching';
+                            this.matchStep = 1; 
+                            this.userTranscript = "";
+                            setTimeout(() => this.initMap(), 500);
+                            // Auto run risk logic
+                            setTimeout(() => {
+                                this.userTranscript = "我现在头特别晕，感觉天旋地转的，站都站不稳，心跳也很快...";
+                                setTimeout(() => this.analyzeRisk(), 1500); 
+                            }, 500);
+                            break;
+                            
+                        case 'cards':
+                            this.appState = 'matching';
+                            this.matchStep = 3;
+                            this.isEmergency = false; // Normal list view
+                            setTimeout(() => this.initMap(), 500);
+                            break;
+
+                        case 'waiting':
+                            this.appState = 'waiting';
+                            this.displayHeader = "李志愿者距您 800米，预计 5 分钟后到达。请您找个安全的地方坐下，保持电话畅通。如有不适加剧，请直接让我帮您拨打120。";
+                            break;
+
+                        case 'visit':
+                            this.appState = 'visit';
+                            this.visitEnded = false;
+                            this.visitTimelineItems = [];
+                            this.showVisitScanner = false;
+                            this.visitTimer = '00:24:15';
+                            break;
+                    }
+                    
+                    this.log(`[DevTools] Jumped to scene: ${scene}`, 'alert');
+                },
+
+                // ==========================
+                // VISIT PHASE LOGIC (陪诊视角)
+                // ==========================
+                getVisitCurrentTime() {
+                    const now = new Date();
+                    return now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+                },
+                
+                scrollVisitToBottom() {
+                    this.$nextTick(() => {
+                        const container = this.$refs.visitContainer;
+                        if(container) {
+                            container.scrollTo({
+                                top: container.scrollHeight,
+                                behavior: 'smooth'
+                            });
+                        }
+                    });
+                },
+
+                addVisitAudioMarker() {
+                    this.visitTimelineItems.push({
+                        id: this.visitIdCounter++,
+                        type: 'audio',
+                        time: this.getVisitCurrentTime()
+                    });
+                    this.scrollVisitToBottom();
+                    this.log('Visit: Audio marker added', 'info');
+                },
+
+                startVisitScan() {
+                    this.showVisitScanner = true;
+                },
+
+                finishVisitScan() {
+                    this.showVisitScanner = false;
+                    setTimeout(() => {
+                        this.visitTimelineItems.push({
+                            id: this.visitIdCounter++,
+                            type: 'vision',
+                            time: this.getVisitCurrentTime()
+                        });
+                        this.scrollVisitToBottom();
+                        this.log('Visit: Vision card generated', 'info');
+                    }, 500);
+                },
+
+                checkVisitDrug() {
+                    this.visitTimelineItems.push({
+                        id: this.visitIdCounter++,
+                        type: 'risk',
+                        time: this.getVisitCurrentTime()
+                    });
+                    this.scrollVisitToBottom();
+                    this.log('Visit: Risk alert triggered', 'alert');
+                },
+
+                endVisitSession() {
+                    this.visitEnded = true;
+                    this.log('Visit: Session ended', 'success');
+                },
+
+                confirmVisitEnd() {
+                    this.jumpTo('intro');
+                },
+
+                playAudio(url) {
+                    return new Promise((resolve) => {
+                        const audio = new Audio(url);
+                        audio.onended = resolve;
+                        audio.play().catch(e => {
+                            console.log("Auto-play blocked", e);
+                            resolve();
+                        });
+                    });
+                },
+
+                log(msg, type = 'normal') {
+                    const time = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    this.systemLogs.push({ time, msg, type });
+                    this.$nextTick(() => {
+                        const container = this.$refs.logContainer;
+                        if (container) container.scrollTop = container.scrollHeight;
+                    });
+                },
+                getOrbClass() {
+                    const s = this.orbState;
+                    if (s === 'idle') return 'w-28 h-28 bg-gradient-to-tr from-primary to-orange-300 scale-100';
+                    if (s === 'speaking') return 'w-32 h-32 bg-gradient-to-tr from-orange-500 to-pink-400 scale-110 animate-breathe shadow-orange-500/50';
+                    if (s === 'listening') return 'w-24 h-24 bg-gradient-to-t from-orange-400 to-orange-200';
+                    if (s === 'processing') return 'w-12 h-12 bg-sysAccent animate-spin rounded-md';
+                    return '';
                 }
             }
-        }).mount('#app')
+        }).mount('#app');
     </script>
 </body>
 </html>
