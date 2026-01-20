@@ -139,139 +139,49 @@
 </head>
 <body>
 
-    <div id="app" class="w-full h-full flex items-center justify-center p-8 gap-12">
-        
-        <!-- ================= SYSTEM DASHBOARD (LEFT) ================= -->
-        <div class="flex-1 h-full max-h-[844px] hidden lg:flex flex-col bg-sysBg rounded-3xl border border-slate-700 shadow-2xl overflow-hidden font-mono text-sm relative">
-            <!-- Sys Header -->
-            <div class="h-12 bg-slate-900 border-b border-slate-800 flex items-center px-6 justify-between">
-                <div class="flex items-center gap-2 text-sysAccent">
-                    <i class="ph-fill ph-users-three text-lg animate-pulse"></i>
-                    <span class="font-bold tracking-widest">YiYi-MATCH v4.0 (ESCORT-ALLOCATION)</span>
-                </div>
-                <div class="flex items-center gap-4 text-slate-500 text-xs">
-                    <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-green-500"></div> LIVE</span>
-                    <span>Task: Needs_Assessment</span>
-                </div>
-            </div>
+    <div id="app" class="w-full h-full flex items-center justify-center p-8 gap-6">
 
-            <div class="flex-1 grid grid-cols-2 grid-rows-2">
-                <!-- 1. Logic Log -->
-                <div class="col-span-2 row-span-1 border-b border-slate-800 p-6 flex flex-col">
-                    <h3 class="text-slate-400 text-xs uppercase tracking-wider mb-4 flex items-center gap-2">
-                        <i class="ph-bold ph-chat-centered-text"></i> 对话节点分析 (Dialogue Graph)
-                    </h3>
-                    <div class="flex-1 overflow-y-auto scroller font-mono space-y-2 pr-2" id="console-logs" ref="logContainer">
-                        <div v-for="(log, i) in systemLogs" :key="i" class="animate-fade-in flex gap-2 leading-tight">
-                            <span class="text-slate-600 shrink-0">[{{ log.time }}]</span>
-                            <span :class="{
-                                'text-sysAccent': log.type === 'info',
-                                'text-sysWarn': log.type === 'alert',
-                                'text-care': log.type === 'match',
-                                'text-green-400': log.type === 'success',
-                                'text-slate-300': log.type === 'normal'
-                            }">
-                                <span v-if="log.type === 'match'" class="mr-1">[MATCH]</span>
-                                {{ log.msg }}
-                            </span>
-                        </div>
-                        <div v-if="isThinking" class="animate-pulse text-slate-500">> {{ thinkingText }}<span class="sys-cursor"></span></div>
-                    </div>
-                </div>
-
-                <!-- 2. Extraction Tags -->
-                <div class="border-r border-slate-800 p-6 bg-sysTerm/30">
-                     <h3 class="text-slate-400 text-xs uppercase tracking-wider mb-4 flex items-center gap-2">
-                        <i class="ph-bold ph-tag"></i> 需求标签提取 (Tags)
-                    </h3>
-                    <div class="flex flex-wrap gap-2">
-                         <div v-for="(val, key) in extractedTags" :key="key" class="inline-flex items-center bg-slate-800/80 px-2 py-1 rounded border border-slate-700/50">
-                            <span class="text-slate-400 text-[10px] uppercase mr-2">{{ key }}</span>
-                            <span class="font-bold text-sysAccent text-xs">{{ val }}</span>
-                         </div>
-                         <div v-if="Object.keys(extractedTags).length === 0" class="text-slate-600 italic">Listening...</div>
-                    </div>
-                </div>
-
-                <!-- 3. Matching Radar (Replaces Risk) -->
-                <div class="p-6 bg-sysTerm/30 relative overflow-hidden flex flex-col">
-                     <h3 class="text-slate-400 text-xs uppercase tracking-wider mb-4 flex items-center gap-2">
-                        <i class="ph-fill ph-target"></i> 陪诊员匹配模型 (Persona Match)
-                    </h3>
-                    
-                    <div class="flex-1 flex flex-col items-center justify-center space-y-4">
-                        <!-- Digital Metrics -->
-                        <div class="w-full space-y-3">
-                            <div class="flex justify-between items-center text-xs">
-                                <span class="text-slate-400">所需专业度 (Pro)</span>
-                                <div class="w-24 h-1.5 bg-slate-700 rounded-full overflow-hidden">
-                                    <div class="h-full bg-blue-500 transition-all duration-1000" :style="{width: metrics.pro + '%'}"></div>
-                                </div>
-                            </div>
-                            <div class="flex justify-between items-center text-xs">
-                                <span class="text-slate-400">所需体力 (Strength)</span>
-                                <div class="w-24 h-1.5 bg-slate-700 rounded-full overflow-hidden">
-                                    <div class="h-full bg-orange-500 transition-all duration-1000" :style="{width: metrics.str + '%'}"></div>
-                                </div>
-                            </div>
-                            <div class="flex justify-between items-center text-xs">
-                                <span class="text-slate-400">所需共情力 (Empathy)</span>
-                                <div class="w-24 h-1.5 bg-slate-700 rounded-full overflow-hidden">
-                                    <div class="h-full bg-pink-500 transition-all duration-1000" :style="{width: metrics.emp + '%'}"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="text-center mt-2">
-                            <p class="text-xs text-white bg-slate-800 px-3 py-1 rounded-full border border-slate-700">{{ matchStatus }} matches found</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ================= DEBUG CONTROLS (RIGHT) ================= -->
-        <div class="hidden xl:flex flex-col gap-3 animate-fade-in">
-            <div class="bg-gray-800 text-white p-4 rounded-2xl shadow-xl border border-gray-700 w-48 sticky top-8">
+        <!-- ================= NAVIGATION SIDEBAR (LEFT) ================= -->
+        <div class="hidden md:flex flex-col gap-3 animate-fade-in">
+            <div class="bg-gray-800 text-white p-4 rounded-2xl shadow-xl border border-gray-700 w-52">
                 <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                    <i class="ph-bold ph-sliders-horizontal"></i> 场景跳转
+                    <i class="ph-bold ph-sliders-horizontal"></i> 场景导航
                 </h3>
                 <div class="space-y-2">
-                    <button @click="jumpTo('intro')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm transition-colors flex items-center gap-2">
-                        <span class="text-gray-500 text-xs">01</span> 首页/封面
+                    <button @click="jumpTo('intro')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm transition-colors flex items-center gap-2" :class="{'bg-gray-700': appState === 'intro'}">
+                        <span class="text-gray-500 text-xs">01</span> 首页封面
                     </button>
-                    <button @click="jumpTo('conversation')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm transition-colors flex items-center gap-2">
-                         <span class="text-gray-500 text-xs">02</span> 问诊对话
+                    <button @click="jumpTo('conversation')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm transition-colors flex items-center gap-2" :class="{'bg-gray-700': appState === 'conversation' && !showResultCards}">
+                        <span class="text-gray-500 text-xs">02</span> 语音问诊
                     </button>
-                    <button @click="jumpTo('results')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm transition-colors flex items-center gap-2">
-                         <span class="text-gray-500 text-xs">03</span> 建档结果
+                    <button @click="jumpTo('results')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm transition-colors flex items-center gap-2" :class="{'bg-gray-700': appState === 'conversation' && showResultCards}">
+                        <span class="text-gray-500 text-xs">03</span> 建档结果
                     </button>
-                    <button @click="jumpTo('matching')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm transition-colors flex items-center gap-2">
-                         <span class="text-gray-500 text-xs">04</span> 匹配模式
+                    <button @click="jumpTo('matching')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm transition-colors flex items-center gap-2" :class="{'bg-gray-700': appState === 'matching'}">
+                        <span class="text-gray-500 text-xs">04</span> 陪诊匹配
                     </button>
-                    <button @click="jumpTo('risk')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm text-red-300 transition-colors flex items-center gap-2 border border-red-500/20 bg-red-500/10">
-                         <span class="text-red-500 text-xs">05</span> 高危警报
+                    <button @click="jumpTo('waiting')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm transition-colors flex items-center gap-2" :class="{'bg-gray-700': appState === 'waiting'}">
+                        <span class="text-gray-500 text-xs">05</span> 等待接单
                     </button>
-                    <button @click="jumpTo('cards')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm transition-colors flex items-center gap-2">
-                         <span class="text-gray-500 text-xs">06</span> 陪诊列表
-                    </button>
-                    <button @click="jumpTo('waiting')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm transition-colors flex items-center gap-2">
-                         <span class="text-gray-500 text-xs">07</span> 等待接单
-                    </button>
-                    <button @click="jumpTo('visit')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm text-emerald-300 transition-colors flex items-center gap-2 border border-emerald-500/20 bg-emerald-500/10">
-                         <span class="text-emerald-500 text-xs">08</span> 陪诊视角
+                    <button @click="jumpTo('visit')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm text-emerald-300 transition-colors flex items-center gap-2 border border-emerald-500/20 bg-emerald-500/10" :class="{'!bg-emerald-600': appState === 'visit'}">
+                        <span class="text-emerald-500 text-xs">06</span> 陪诊视角
                     </button>
                 </div>
             </div>
             
-            <div class="bg-gray-800 text-white p-4 rounded-2xl shadow-xl border border-gray-700 w-48">
-                 <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Dev Tools</h3>
-                 <button @click="reloadApp" class="w-full text-left px-3 py-2 rounded hover:bg-red-500/20 text-red-300 text-sm transition-colors flex items-center gap-2">
-                    <i class="ph-bold ph-arrow-counter-clockwise"></i> Reset App
+            <div class="bg-gray-800 text-white p-4 rounded-2xl shadow-xl border border-gray-700 w-52">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">开发工具</h3>
+                <button @click="reloadApp" class="w-full text-left px-3 py-2 rounded hover:bg-red-500/20 text-red-300 text-sm transition-colors flex items-center gap-2">
+                    <i class="ph-bold ph-arrow-counter-clockwise"></i> 重置应用
                 </button>
+                <div class="mt-3 text-xs text-gray-500">
+                    <p>当前状态: {{ appState }}</p>
+                    <p class="mt-1 text-yellow-400">UI Only 版本</p>
+                </div>
             </div>
         </div>
 
-        <!-- ================= PHONE INTERFACE (RIGHT) ================= -->
+        <!-- ================= PHONE INTERFACE (CENTER) ================= -->
         <div id="phone-frame">
             <div class="w-full h-full flex flex-col bg-bg relative">
                 
@@ -706,7 +616,7 @@
                                         <div class="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-600 shadow-sm border border-slate-200 group-hover:bg-sky-50 group-hover:text-sky-500 transition-colors">
                                             <i class="ph-fill ph-scan text-2xl"></i>
                                         </div>
-                                        <span class="text-[10px] font-bold text-slate-500">规划就医流程</span>
+                                        <span class="text-[10px] font-bold text-slate-500">划就医流程</span>
                                     </button>
                                     <button @click="checkVisitDrug" class="btn-press flex flex-col items-center gap-1 group">
                                         <div class="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-600 shadow-sm border border-slate-200 group-hover:bg-red-50 group-hover:text-red-500 transition-colors">
@@ -764,18 +674,22 @@
     </div>
 
     <!-- Configuration -->
-    <script src="env.js"></script>
+    <script src="env.js" onerror="console.log('env.js not found, using fallback TTS')"></script>
 
     <!-- Logic Script -->
     <script type="module">
-        // Safe Env Loader
+        // Safe Env Loader - Graceful fallback when env.js is missing
         const RAW_ENV = window.MINIMAX_ENV || {};
         const ENV = {
-            zhipu_api_key: RAW_ENV.ZHIPU_API_KEY,
-            minimax_api_key: RAW_ENV.API_KEY,
-            minimax_group_id: RAW_ENV.GROUP_ID,
-            minimax_model_id: "speech-02-turbo", // Updated to Turbo 02
-            minimax_voice_id: RAW_ENV.VOICE_ID || "female-chengshu"
+            zhipu_api_key: RAW_ENV.ZHIPU_API_KEY || '',
+            minimax_api_key: RAW_ENV.API_KEY || '',
+            minimax_group_id: RAW_ENV.GROUP_ID || '',
+            minimax_model_id: "speech-02-turbo",
+            minimax_voice_id: RAW_ENV.VOICE_ID || "female-chengshu",
+            // Check if TTS API is properly configured
+            get hasTTSConfig() {
+                return this.minimax_api_key && this.minimax_api_key.length > 10 && this.minimax_group_id;
+            }
         };
 
         const { createApp } = Vue;
@@ -1184,52 +1098,51 @@
                     this.statusText = "医依正在说话...";
                     
                     // Check if MiniMax API is configured
-                    const hasApiKey = ENV.minimax_api_key && ENV.minimax_api_key.length > 10 && ENV.minimax_group_id;
-                    
-                    if (!hasApiKey) {
+                    if (!ENV.hasTTSConfig) {
                         this.log("TTS API not configured, using browser fallback", 'info');
                         await this.playBrowserTTS(text);
-                    } else {
-                        try {
-                            this.log(`TTS Request: ${ENV.minimax_model_id}`, 'info'); 
-                            
-                            const res = await fetch(`https://api.minimax.chat/v1/text_to_speech?GroupId=${ENV.minimax_group_id}`, {
-                                method: "POST",
-                                headers: {
-                                    "Content-Type": "application/json",
-                                    "Authorization": `Bearer ${ENV.minimax_api_key}`
-                                },
-                                body: JSON.stringify({
-                                    voice_id: ENV.minimax_voice_id, 
-                                    text: text,
-                                    model: ENV.minimax_model_id
-                                })
-                            });
+                        return;
+                    }
+                    
+                    try {
+                        this.log(`TTS Request: ${ENV.minimax_model_id}`, 'info'); 
+                        
+                        const res = await fetch(`https://api.minimax.chat/v1/text_to_speech?GroupId=${ENV.minimax_group_id}`, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "Authorization": `Bearer ${ENV.minimax_api_key}`
+                            },
+                            body: JSON.stringify({
+                                voice_id: ENV.minimax_voice_id, 
+                                text: text,
+                                model: ENV.minimax_model_id
+                            })
+                        });
 
-                            // Security Check: Did we get JSON (Error) instead of Audio?
-                            const contentType = res.headers.get("content-type");
-                            if (contentType && contentType.includes("application/json")) {
-                                const jsonErr = await res.json();
-                                throw new Error(`MiniMax API Error: ${JSON.stringify(jsonErr)}`);
-                            }
-                            
-                            if (!res.ok) {
-                                const errText = await res.text();
-                                throw new Error(`API HTTP Error: ${res.status} ${errText}`);
-                            }
-                            
-                            // Force Metadata for Browser Compatibility (macOS/iOS)
-                            const blob = await res.blob();
-                            const audioBlob = new Blob([blob], { type: 'audio/mpeg' });
-                            const url = URL.createObjectURL(audioBlob);
-                            
-                            await this.playAudio(url);
-                        } catch (e) {
-                            this.log("TTS API Error, using browser fallback: " + e.message, 'alert');
-                            console.error("TTS Detailed Error:", e);
-                            // Fallback to browser TTS
-                            await this.playBrowserTTS(text);
+                        // Security Check: Did we get JSON (Error) instead of Audio?
+                        const contentType = res.headers.get("content-type");
+                        if (contentType && contentType.includes("application/json")) {
+                            const jsonErr = await res.json();
+                            throw new Error(`MiniMax API Error: ${JSON.stringify(jsonErr)}`);
                         }
+                        
+                        if (!res.ok) {
+                            const errText = await res.text();
+                            throw new Error(`API HTTP Error: ${res.status} ${errText}`);
+                        }
+                        
+                        // Force Metadata for Browser Compatibility (macOS/iOS)
+                        const blob = await res.blob();
+                        const audioBlob = new Blob([blob], { type: 'audio/mpeg' });
+                        const url = URL.createObjectURL(audioBlob);
+                        
+                        await this.playAudio(url);
+                    } catch (e) {
+                        this.log("TTS API Error, using browser fallback: " + e.message, 'alert');
+                        console.error("TTS Detailed Error:", e);
+                        // Fallback to browser TTS
+                        await this.playBrowserTTS(text);
                     }
                     
                     // Only resume if we are not in special states
@@ -1247,42 +1160,31 @@
                 
                 // Browser native TTS fallback (no API key needed)
                 async playBrowserTTS(text) {
-                    const self = this;
                     return new Promise((resolve) => {
-                        // Always set a maximum timeout to prevent getting stuck
-                        const maxDuration = Math.max(text.length * 120, 2500);
-                        let resolved = false;
-                        
-                        const done = () => {
-                            if (!resolved) {
-                                resolved = true;
-                                resolve();
-                            }
-                        };
-                        
-                        // Timeout fallback - always resolve after estimated time
-                        setTimeout(done, maxDuration);
-                        
                         if ('speechSynthesis' in window) {
-                            try {
-                                window.speechSynthesis.cancel();
-                                
-                                const utterance = new SpeechSynthesisUtterance(text);
-                                utterance.lang = 'zh-CN';
-                                utterance.rate = 1.0;
-                                utterance.pitch = 1.0;
-                                
-                                utterance.onend = done;
-                                utterance.onerror = done;
-                                
-                                window.speechSynthesis.speak(utterance);
-                                self.log("Browser TTS started", 'info');
-                            } catch(e) {
-                                self.log("TTS exception: " + e.message, 'alert');
-                                done();
+                            // Cancel any ongoing speech
+                            window.speechSynthesis.cancel();
+                            
+                            const utterance = new SpeechSynthesisUtterance(text);
+                            utterance.lang = 'zh-CN';
+                            utterance.rate = 0.9;
+                            utterance.pitch = 1.0;
+                            
+                            // Try to find a Chinese voice
+                            const voices = window.speechSynthesis.getVoices();
+                            const zhVoice = voices.find(v => v.lang.includes('zh') || v.lang.includes('CN'));
+                            if (zhVoice) {
+                                utterance.voice = zhVoice;
                             }
+                            
+                            utterance.onend = () => resolve();
+                            utterance.onerror = () => resolve();
+                            
+                            window.speechSynthesis.speak(utterance);
                         } else {
-                            self.log("No TTS support", 'alert');
+                            // No TTS available, wait to simulate speaking
+                            this.log("Browser TTS not available", 'alert');
+                            setTimeout(resolve, Math.min(text.length * 100, 5000));
                         }
                     });
                 },
