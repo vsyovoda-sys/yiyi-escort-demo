@@ -100,9 +100,10 @@
         }
 
         #phone-frame {
-            width: min(390px, 45vh);
-            height: min(844px, 92vh);
-            aspect-ratio: 390 / 844;
+            width: calc(90vh * 390 / 844);
+            height: 90vh;
+            max-width: 390px;
+            max-height: 844px;
             background-color: #FFF9F5;
             border-radius: 40px;
             position: relative;
