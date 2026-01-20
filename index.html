@@ -1101,6 +1101,15 @@
                     if (!ENV.hasTTSConfig) {
                         this.log("TTS API not configured, using browser fallback", 'info');
                         await this.playBrowserTTS(text);
+                        // Continue to startListening after browser TTS
+                        if(!this.showResultCards && this.appState === 'conversation') {
+                            this.orbState = 'idle';
+                            this.statusText = "";
+                            await new Promise(r => setTimeout(r, 2000));
+                            this.startListening();
+                        } else if (this.appState !== 'conversation') {
+                            this.orbState = 'idle';
+                        }
                         return;
                     }
                     
