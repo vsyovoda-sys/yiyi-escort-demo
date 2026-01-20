@@ -1159,45 +1159,42 @@
                 
                 // Browser native TTS fallback (no API key needed)
                 async playBrowserTTS(text) {
+                    const self = this;
                     return new Promise((resolve) => {
-                        if ('speechSynthesis' in window) {
-                            // Cancel any ongoing speech
-                            window.speechSynthesis.cancel();
-                            
-                            const utterance = new SpeechSynthesisUtterance(text);
-                            utterance.lang = 'zh-CN';
-                            utterance.rate = 0.9;
-                            utterance.pitch = 1.0;
-                            
-                            // Try to find a Chinese voice
-                            const voices = window.speechSynthesis.getVoices();
-                            const zhVoice = voices.find(v => v.lang.includes('zh') || v.lang.includes('CN'));
-                            if (zhVoice) {
-                                utterance.voice = zhVoice;
+                        // Always set a maximum timeout to prevent getting stuck
+                        const maxDuration = Math.max(text.length * 120, 2500);
+                        let resolved = false;
+                        
+                        const done = () => {
+                            if (!resolved) {
+                                resolved = true;
+                                resolve();
                             }
-                            
-                            // Set up timeout fallback in case onend doesn't fire
-                            const estimatedDuration = Math.max(text.length * 150, 3000);
-                            const timeoutId = setTimeout(() => {
-                                this.log("TTS timeout, continuing...", 'info');
-                                resolve();
-                            }, estimatedDuration);
-                            
-                            utterance.onend = () => {
-                                clearTimeout(timeoutId);
-                                resolve();
-                            };
-                            utterance.onerror = (e) => {
-                                clearTimeout(timeoutId);
-                                this.log("TTS error: " + e.error, 'alert');
-                                resolve();
-                            };
-                            
-                            window.speechSynthesis.speak(utterance);
+                        };
+                        
+                        // Timeout fallback - always resolve after estimated time
+                        setTimeout(done, maxDuration);
+                        
+                        if ('speechSynthesis' in window) {
+                            try {
+                                window.speechSynthesis.cancel();
+                                
+                                const utterance = new SpeechSynthesisUtterance(text);
+                                utterance.lang = 'zh-CN';
+                                utterance.rate = 1.0;
+                                utterance.pitch = 1.0;
+                                
+                                utterance.onend = done;
+                                utterance.onerror = done;
+                                
+                                window.speechSynthesis.speak(utterance);
+                                self.log("Browser TTS started", 'info');
+                            } catch(e) {
+                                self.log("TTS exception: " + e.message, 'alert');
+                                done();
+                            }
                         } else {
-                            // No TTS available, wait to simulate speaking
-                            this.log("Browser TTS not available", 'alert');
-                            setTimeout(resolve, Math.min(text.length * 100, 5000));
+                            self.log("No TTS support", 'alert');
                         }
                     });
                 },
