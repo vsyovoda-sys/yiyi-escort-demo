@@ -17,6 +17,11 @@
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Leaflet Maps (Free OpenSource Map) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
     <script>
         tailwind.config = {
             theme: {
@@ -41,10 +46,6 @@
                         'float-up': 'floatUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards',
                         'fade-in': 'fadeIn 0.6s ease-out forwards',
                         'slide-up': 'slideUp 0.5s ease-out forwards',
-                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                        'scan': 'scan 2s linear infinite',
-                        'wave': 'wave 1.2s ease-in-out infinite',
-                        'pop': 'pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
                     },
                     keyframes: {
                         breathe: {
@@ -130,143 +131,57 @@
         }
         .list-move, .list-enter-active, .list-leave-active { transition: all 0.5s ease; }
         .list-enter-from, .list-leave-to { opacity: 0; transform: translateY(30px); }
+        .animate-pulse-slow { animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        .animate-scan { animation: scan 2s linear infinite; }
+        .animate-wave { animation: wave 1.2s ease-in-out infinite; }
+        .animate-pop { animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
     </style>
 </head>
 <body>
 
-    <div id="app" class="w-full h-full flex items-center justify-center p-8 gap-12">
-        
-        <!-- ================= SYSTEM DASHBOARD (LEFT) ================= -->
-        <div class="flex-1 h-full max-h-[844px] hidden lg:flex flex-col bg-sysBg rounded-3xl border border-slate-700 shadow-2xl overflow-hidden font-mono text-sm relative">
-            <!-- Sys Header -->
-            <div class="h-12 bg-slate-900 border-b border-slate-800 flex items-center px-6 justify-between">
-                <div class="flex items-center gap-2 text-sysAccent">
-                    <i class="ph-fill ph-users-three text-lg animate-pulse"></i>
-                    <span class="font-bold tracking-widest">YiYi-MATCH v4.0 (ESCORT-ALLOCATION)</span>
-                </div>
-                <div class="flex items-center gap-4 text-slate-500 text-xs">
-                    <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-green-500"></div> LIVE</span>
-                    <span>Task: Needs_Assessment</span>
-                </div>
-            </div>
+    <div id="app" class="w-full h-full flex items-center justify-center p-8 gap-6">
 
-            <div class="flex-1 grid grid-cols-2 grid-rows-2">
-                <!-- 1. Logic Log -->
-                <div class="col-span-2 row-span-1 border-b border-slate-800 p-6 flex flex-col">
-                    <h3 class="text-slate-400 text-xs uppercase tracking-wider mb-4 flex items-center gap-2">
-                        <i class="ph-bold ph-chat-centered-text"></i> 对话节点分析 (Dialogue Graph)
-                    </h3>
-                    <div class="flex-1 overflow-y-auto scroller font-mono space-y-2 pr-2" id="console-logs" ref="logContainer">
-                        <div v-for="(log, i) in systemLogs" :key="i" class="animate-fade-in flex gap-2 leading-tight">
-                            <span class="text-slate-600 shrink-0">[{{ log.time }}]</span>
-                            <span :class="{
-                                'text-sysAccent': log.type === 'info',
-                                'text-sysWarn': log.type === 'alert',
-                                'text-care': log.type === 'match',
-                                'text-green-400': log.type === 'success',
-                                'text-slate-300': log.type === 'normal'
-                            }">
-                                <span v-if="log.type === 'match'" class="mr-1">[MATCH]</span>
-                                {{ log.msg }}
-                            </span>
-                        </div>
-                        <div v-if="isThinking" class="animate-pulse text-slate-500">> {{ thinkingText }}<span class="sys-cursor"></span></div>
-                    </div>
-                </div>
-
-                <!-- 2. Extraction Tags -->
-                <div class="border-r border-slate-800 p-6 bg-sysTerm/30">
-                     <h3 class="text-slate-400 text-xs uppercase tracking-wider mb-4 flex items-center gap-2">
-                        <i class="ph-bold ph-tag"></i> 需求标签提取 (Tags)
-                    </h3>
-                    <div class="flex flex-wrap gap-2">
-                         <div v-for="(val, key) in extractedTags" :key="key" class="inline-flex items-center bg-slate-800/80 px-2 py-1 rounded border border-slate-700/50">
-                            <span class="text-slate-400 text-[10px] uppercase mr-2">{{ key }}</span>
-                            <span class="font-bold text-sysAccent text-xs">{{ val }}</span>
-                         </div>
-                         <div v-if="Object.keys(extractedTags).length === 0" class="text-slate-600 italic">Listening...</div>
-                    </div>
-                </div>
-
-                <!-- 3. Matching Radar (Replaces Risk) -->
-                <div class="p-6 bg-sysTerm/30 relative overflow-hidden flex flex-col">
-                     <h3 class="text-slate-400 text-xs uppercase tracking-wider mb-4 flex items-center gap-2">
-                        <i class="ph-fill ph-target"></i> 陪诊员匹配模型 (Persona Match)
-                    </h3>
-                    
-                    <div class="flex-1 flex flex-col items-center justify-center space-y-4">
-                        <!-- Digital Metrics -->
-                        <div class="w-full space-y-3">
-                            <div class="flex justify-between items-center text-xs">
-                                <span class="text-slate-400">所需专业度 (Pro)</span>
-                                <div class="w-24 h-1.5 bg-slate-700 rounded-full overflow-hidden">
-                                    <div class="h-full bg-blue-500 transition-all duration-1000" :style="{width: metrics.pro + '%'}"></div>
-                                </div>
-                            </div>
-                            <div class="flex justify-between items-center text-xs">
-                                <span class="text-slate-400">所需体力 (Strength)</span>
-                                <div class="w-24 h-1.5 bg-slate-700 rounded-full overflow-hidden">
-                                    <div class="h-full bg-orange-500 transition-all duration-1000" :style="{width: metrics.str + '%'}"></div>
-                                </div>
-                            </div>
-                            <div class="flex justify-between items-center text-xs">
-                                <span class="text-slate-400">所需共情力 (Empathy)</span>
-                                <div class="w-24 h-1.5 bg-slate-700 rounded-full overflow-hidden">
-                                    <div class="h-full bg-pink-500 transition-all duration-1000" :style="{width: metrics.emp + '%'}"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="text-center mt-2">
-                            <p class="text-xs text-white bg-slate-800 px-3 py-1 rounded-full border border-slate-700">{{ matchStatus }} matches found</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ================= DEBUG CONTROLS (RIGHT) ================= -->
-        <div class="hidden xl:flex flex-col gap-3 animate-fade-in">
-            <div class="bg-gray-800 text-white p-4 rounded-2xl shadow-xl border border-gray-700 w-48 sticky top-8">
+        <!-- ================= NAVIGATION SIDEBAR (LEFT) ================= -->
+        <div class="hidden md:flex flex-col gap-3 animate-fade-in">
+            <div class="bg-gray-800 text-white p-4 rounded-2xl shadow-xl border border-gray-700 w-52">
                 <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                    <i class="ph-bold ph-sliders-horizontal"></i> 场景跳转
+                    <i class="ph-bold ph-sliders-horizontal"></i> 场景导航
                 </h3>
                 <div class="space-y-2">
-                    <button @click="jumpTo('intro')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm transition-colors flex items-center gap-2">
-                        <span class="text-gray-500 text-xs">01</span> 首页/封面
+                    <button @click="jumpTo('intro')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm transition-colors flex items-center gap-2" :class="{'bg-gray-700': appState === 'intro'}">
+                        <span class="text-gray-500 text-xs">01</span> 首页封面
                     </button>
-                    <button @click="jumpTo('conversation')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm transition-colors flex items-center gap-2">
-                         <span class="text-gray-500 text-xs">02</span> 陪诊对话
+                    <button @click="jumpTo('conversation')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm transition-colors flex items-center gap-2" :class="{'bg-gray-700': appState === 'conversation' && !showResultCards}">
+                        <span class="text-gray-500 text-xs">02</span> 语音问诊
                     </button>
-                    <button @click="jumpTo('results')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm transition-colors flex items-center gap-2">
-                         <span class="text-gray-500 text-xs">03</span> 建档结果
+                    <button @click="jumpTo('results')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm transition-colors flex items-center gap-2" :class="{'bg-gray-700': appState === 'conversation' && showResultCards}">
+                        <span class="text-gray-500 text-xs">03</span> 建档结果
                     </button>
-                    <button @click="jumpTo('matching')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm transition-colors flex items-center gap-2">
-                         <span class="text-gray-500 text-xs">04</span> 匹配模式
+                    <button @click="jumpTo('matching')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm transition-colors flex items-center gap-2" :class="{'bg-gray-700': appState === 'matching'}">
+                        <span class="text-gray-500 text-xs">04</span> 陪诊匹配
                     </button>
-                    <button @click="jumpTo('risk')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm text-red-300 transition-colors flex items-center gap-2 border border-red-500/20 bg-red-500/10">
-                         <span class="text-red-500 text-xs">05</span> 高危警报
+                    <button @click="jumpTo('waiting')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm transition-colors flex items-center gap-2" :class="{'bg-gray-700': appState === 'waiting'}">
+                        <span class="text-gray-500 text-xs">05</span> 等待接单
                     </button>
-                    <button @click="jumpTo('cards')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm transition-colors flex items-center gap-2">
-                         <span class="text-gray-500 text-xs">06</span> 陪诊列表
-                    </button>
-                    <button @click="jumpTo('waiting')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm transition-colors flex items-center gap-2">
-                         <span class="text-gray-500 text-xs">07</span> 等待接单
-                    </button>
-                    <button @click="jumpTo('visit')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm text-emerald-300 transition-colors flex items-center gap-2 border border-emerald-500/20 bg-emerald-500/10">
-                         <span class="text-emerald-500 text-xs">08</span> 陪诊视角
+                    <button @click="jumpTo('visit')" class="w-full text-left px-3 py-2 rounded hover:bg-gray-700 text-sm text-emerald-300 transition-colors flex items-center gap-2 border border-emerald-500/20 bg-emerald-500/10" :class="{'!bg-emerald-600': appState === 'visit'}">
+                        <span class="text-emerald-500 text-xs">06</span> 陪诊视角
                     </button>
                 </div>
             </div>
             
-            <div class="bg-gray-800 text-white p-4 rounded-2xl shadow-xl border border-gray-700 w-48">
-                 <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Dev Tools</h3>
-                 <button @click="location.reload()" class="w-full text-left px-3 py-2 rounded hover:bg-red-500/20 text-red-300 text-sm transition-colors flex items-center gap-2">
-                    <i class="ph-bold ph-arrow-counter-clockwise"></i> Reset App
+            <div class="bg-gray-800 text-white p-4 rounded-2xl shadow-xl border border-gray-700 w-52">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">开发工具</h3>
+                <button @click="reloadApp" class="w-full text-left px-3 py-2 rounded hover:bg-red-500/20 text-red-300 text-sm transition-colors flex items-center gap-2">
+                    <i class="ph-bold ph-arrow-counter-clockwise"></i> 重置应用
                 </button>
+                <div class="mt-3 text-xs text-gray-500">
+                    <p>当前状态: {{ appState }}</p>
+                    <p class="mt-1 text-yellow-400">UI Only 版本</p>
+                </div>
             </div>
         </div>
 
-        <!-- ================= PHONE INTERFACE (RIGHT) ================= -->
+        <!-- ================= PHONE INTERFACE (CENTER) ================= -->
         <div id="phone-frame">
             <div class="w-full h-full flex flex-col bg-bg relative">
                 
@@ -301,7 +216,7 @@
                             <div class="w-24 h-24 bg-white rounded-full shadow-sm flex items-center justify-center mb-8 animate-float-up">
                                 <i class="ph-fill ph-clipboard-text text-5xl text-primary"></i>
                             </div>
-                            <h2 class="text-5xl font-bold text-slate-800 mb-6">建立就诊档案</h2>
+                            <h2 class="text-5xl font-bold text-slate-800 mb-6">建立陪诊档案</h2>
                             <p class="text-slate-500 text-2xl leading-relaxed max-w-[320px]">
                                 我会问您几个简单的问题，为您建立一份专属的就诊档案，并匹配最合适的陪诊员。
                             </p>
@@ -383,8 +298,8 @@
                                                 <div class="font-bold text-xl">心内科陪诊经验</div>
                                             </div>
                                             <div class="bg-white/10 rounded-2xl p-4 backdrop-blur-sm">
-                                                <div class="text-base text-slate-300 mb-1">综合特征</div>
-                                                <div class="font-bold text-xl">耐心、懂方言</div>
+                                                <div class="text-base text-slate-300 mb-1">性格画像</div>
+                                                <div class="font-bold text-xl">耐心、高共情</div>
                                             </div>
                                         </div>
 
@@ -460,18 +375,18 @@
                 </transition>
 
                 <!-- 4. MATCHING PHASE (LBS MAP) -->
-                <transition name="fade">
+                <transition name="fade" @after-enter="initMap">
                     <div v-if="appState === 'matching'" class="absolute inset-0 flex flex-col bg-slate-100 z-50">
-                        <!-- Mock Map Background -->
-                        <div class="absolute inset-0 z-0 bg-cover bg-center opacity-60" style="background-image: url('https://img.freepik.com/free-vector/city-map-navigation-interface_23-2148296766.jpg?auto=format&fit=crop&w=800&q=80'); filter: grayscale(20%);"></div>
+                        <!-- Leaflet Map Container -->
+                        <div id="map-container" class="absolute inset-0 z-0 bg-slate-200"></div>
                         
-                        <!-- Map Overlay Gradient -->
-                        <div class="absolute inset-0 bg-gradient-to-b from-white/80 via-transparent to-white/90 z-0"></div>
+                        <!-- Map Overlay Gradient (Kept for text readability) -->
+                        <div class="absolute inset-0 bg-gradient-to-b from-white/90 via-transparent to-white/95 z-0 pointer-events-none"></div>
 
                         <!-- Top Bar -->
-                        <div class="relative z-10 pt-16 px-6 flex justify-between items-center">
-                            <h2 class="text-3xl font-bold text-slate-800">附近陪诊资源</h2>
-                            <div class="bg-white/80 backdrop-blur px-3 py-1 rounded-full text-sm font-bold text-green-600 shadow-sm flex items-center gap-1">
+                        <div class="relative z-10 pt-16 px-6 flex justify-between items-center pointer-events-none">
+                            <h2 class="text-3xl font-bold text-slate-800 drop-shadow-sm">附近陪诊资源</h2>
+                            <div class="bg-white/90 backdrop-blur px-3 py-1 rounded-full text-sm font-bold text-green-600 shadow-sm flex items-center gap-1">
                                 <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
                                 GPS定位中...
                             </div>
@@ -486,14 +401,14 @@
                                     <i class="ph-fill ph-clock-countdown text-4xl mb-2 text-orange-400"></i>
                                     <span class="text-2xl font-bold">实时陪诊</span>
                                 </button>
-                                <button class="flex-1 h-32 bg-white rounded-[2rem] shadow-xl flex flex-col items-center justify-center text-slate-800 border border-slate-200 active:scale-95 transition-all">
+                                <button @click="startAppointmentMatch" class="flex-1 h-32 bg-white rounded-[2rem] shadow-xl flex flex-col items-center justify-center text-slate-800 border border-slate-200 active:scale-95 transition-all">
                                     <i class="ph-fill ph-calendar-check text-4xl mb-2 text-blue-500"></i>
                                     <span class="text-2xl font-bold">预约陪诊</span>
                                 </button>
                             </div>
 
-                            <!-- STEP 2: Real-time Analysis (Red Alert Area) -->
-                            <div v-if="matchStep === 1 || matchStep === 2" class="w-full relative">
+                            <!-- STEP 2: Real-time Analysis (Red Alert Area) & Appointment Info -->
+                            <div v-if="matchStep === 1 || matchStep === 2 || matchStep === 4" class="w-full relative">
                                 <!-- Emergency Alert Overlay -->
                                 <div v-if="isEmergency" class="absolute -inset-10 bg-red-500/20 z-0 animate-pulse rounded-[3rem]"></div>
                                 
@@ -513,62 +428,21 @@
 
                             <!-- STEP 3: Escort Cards List (Swipeable) -->
                             <div v-if="matchStep === 3" class="space-y-4 overflow-y-auto max-h-[60vh] pb-24 scroller pr-1 relative">
+                                <h3 v-if="matchMode === 'appointment'" class="text-center text-slate-500 font-bold mb-2 text-sm bg-white/50 py-1 rounded-full backdrop-blur">请选择一位陪诊员</h3>
                                 
                                 <!-- Card 1: Free -->
-                                <div @click="selectEscort('free')" class="bg-white rounded-3xl p-5 shadow-lg border-2 border-transparent hover:border-orange-400 transition-all cursor-pointer relative overflow-hidden group">
-                                    <div class="absolute top-0 right-0 bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-bl-xl">公益免费</div>
-                                    <div class="flex gap-4">
-                                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" class="w-16 h-16 rounded-full bg-slate-100" />
-                                        <div class="flex-1">
-                                            <h3 class="font-bold text-xl text-slate-800">李志愿者 <span class="text-sm font-normal text-slate-500 block">45岁 · 社区义工</span></h3>
-                                            <div class="flex flex-wrap gap-1 mt-2">
-                                                <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">实名认证</span>
-                                                <span class="text-xs bg-orange-50 text-orange-600 px-2 py-0.5 rounded">耐心温和</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="mt-4 flex justify-between items-center text-sm border-t border-slate-50 pt-3">
-                                        <span class="text-slate-500">好评率 99%</span>
-                                        <span class="font-bold text-orange-500">Lv.5 荣誉居民</span>
-                                    </div>
+                                <div @click="selectEscort('free')" class="cursor-pointer transition-transform hover:scale-[1.02] active:scale-95 shadow-md hover:shadow-xl rounded-2xl overflow-hidden mb-4">
+                                    <img :src="escortImages.free" @error="$event.target.src = fallbackImages.free" class="w-full h-auto object-cover block" alt="Volunteer Card" />
                                 </div>
 
                                 <!-- Card 2: Student -->
-                                <div @click="selectEscort('student')" class="bg-white rounded-3xl p-5 shadow-lg border-2 border-transparent hover:border-orange-400 transition-all cursor-pointer relative overflow-hidden">
-                                     <div class="absolute top-0 right-0 bg-blue-50 text-blue-600 text-lg font-bold px-4 py-1 rounded-bl-2xl">¥ 30/h</div>
-                                    <div class="flex gap-4">
-                                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Annie" class="w-16 h-16 rounded-full bg-slate-100" />
-                                        <div class="flex-1">
-                                            <h3 class="font-bold text-xl text-slate-800">王同学 <span class="text-sm font-normal text-slate-500 block">护理系 · 大三在读</span></h3>
-                                            <div class="flex flex-wrap gap-1 mt-2">
-                                                <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">学生证认证</span>
-                                                <span class="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded">专业护理基础</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="mt-4 flex justify-between items-center text-sm border-t border-slate-50 pt-3">
-                                        <span class="text-slate-500">好评率 95%</span>
-                                        <span class="font-bold text-slate-800">接单 32 次</span>
-                                    </div>
+                                <div @click="selectEscort('student')" class="cursor-pointer transition-transform hover:scale-[1.02] active:scale-95 shadow-md hover:shadow-xl rounded-2xl overflow-hidden mb-4">
+                                     <img :src="escortImages.student" @error="$event.target.src = fallbackImages.student" class="w-full h-auto object-cover block" alt="Student Card" />
                                 </div>
 
                                 <!-- Card 3: Pro -->
-                                <div @click="selectEscort('pro')" class="bg-white rounded-3xl p-5 shadow-lg border-2 border-transparent hover:border-orange-400 transition-all cursor-pointer relative overflow-hidden">
-                                     <div class="absolute top-0 right-0 bg-orange-50 text-orange-600 text-lg font-bold px-4 py-1 rounded-bl-2xl">¥ 80/h</div>
-                                    <div class="flex gap-4">
-                                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Jack" class="w-16 h-16 rounded-full bg-slate-100" />
-                                        <div class="flex-1">
-                                            <h3 class="font-bold text-xl text-slate-800">张护师 <span class="text-sm font-normal text-slate-500 block">34岁 · 8年从业</span></h3>
-                                            <div class="flex flex-wrap gap-1 mt-2">
-                                                <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">RN执照</span>
-                                                <span class="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded">急救资质</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="mt-4 flex justify-between items-center text-sm border-t border-slate-50 pt-3">
-                                        <span class="text-slate-500">好评率 100%</span>
-                                        <span class="font-bold text-orange-500">金牌陪诊师</span>
-                                    </div>
+                                <div @click="selectEscort('pro')" class="cursor-pointer transition-transform hover:scale-[1.02] active:scale-95 shadow-md hover:shadow-xl rounded-2xl overflow-hidden mb-4">
+                                     <img :src="escortImages.pro" @error="$event.target.src = fallbackImages.pro" class="w-full h-auto object-cover block" alt="Expert Card" />
                                 </div>
                             </div>
 
@@ -579,10 +453,15 @@
                 <!-- 5. WAITING PHASE -->
                 <transition name="fade">
                     <div v-if="appState === 'waiting'" class="absolute inset-0 flex flex-col bg-bg z-50 items-center justify-center p-8">
-                        <div class="w-48 h-48 rounded-full border-4 border-orange-100 flex items-center justify-center relative mb-12">
-                            <div class="absolute inset-0 border-t-4 border-orange-400 rounded-full animate-spin"></div>
-                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" class="w-40 h-40 rounded-full bg-slate-100" />
-                            <div class="absolute -bottom-4 bg-slate-900 text-white px-4 py-1 rounded-full text-sm font-bold">5 分钟后到达</div>
+                        <div class="w-[300px] bg-white rounded-3xl shadow-xl overflow-hidden relative mb-12 transform scale-100">
+                             <!-- Loading Ring Overlaid -->
+                             <div class="absolute -top-4 -right-4 w-12 h-12 border-4 border-orange-400 border-r-transparent rounded-full animate-spin z-50"></div>
+                             
+                            <img :src="escortImages[selectedEscort] || escortImages.free" @error="$event.target.src = fallbackImages[selectedEscort] || fallbackImages.free" class="w-full h-auto object-cover block" />
+                            
+                            <div class="bg-slate-900 text-white font-bold text-center py-2 text-sm">
+                                预计 5 分钟后到达
+                            </div>
                         </div>
                         
                         <div class="bg-white w-full rounded-[2rem] p-6 shadow-xl border border-slate-100 text-center space-y-4">
@@ -737,7 +616,7 @@
                                         <div class="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-600 shadow-sm border border-slate-200 group-hover:bg-sky-50 group-hover:text-sky-500 transition-colors">
                                             <i class="ph-fill ph-scan text-2xl"></i>
                                         </div>
-                                        <span class="text-[10px] font-bold text-slate-500">拍单据</span>
+                                        <span class="text-[10px] font-bold text-slate-500">划就医流程</span>
                                     </button>
                                     <button @click="checkVisitDrug" class="btn-press flex flex-col items-center gap-1 group">
                                         <div class="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-600 shadow-sm border border-slate-200 group-hover:bg-red-50 group-hover:text-red-500 transition-colors">
@@ -786,23 +665,31 @@
                     </div>
                 </transition>
 
+                <!-- Disclaimer (Inside Phone Overlay) -->
+                <div class="absolute bottom-4 left-0 w-full text-center z-[60] pointer-events-none">
+                    <p class="text-slate-400 text-[10px] opacity-80">*服务仅限非医疗性质的基础陪诊，AI内容不构成诊疗建议，请遵医嘱。</p>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- Configuration -->
-    <script src="env.js"></script>
+    <script src="env.js" onerror="console.log('env.js not found, using fallback TTS')"></script>
 
     <!-- Logic Script -->
     <script type="module">
-        // Safe Env Loader
+        // Safe Env Loader - Graceful fallback when env.js is missing
         const RAW_ENV = window.MINIMAX_ENV || {};
         const ENV = {
-            zhipu_api_key: RAW_ENV.ZHIPU_API_KEY,
-            minimax_api_key: RAW_ENV.API_KEY,
-            minimax_group_id: RAW_ENV.GROUP_ID,
-            minimax_model_id: "speech-02-turbo", // Updated to Turbo 02
-            minimax_voice_id: RAW_ENV.VOICE_ID || "female-chengshu"
+            zhipu_api_key: RAW_ENV.ZHIPU_API_KEY || '',
+            minimax_api_key: RAW_ENV.API_KEY || '',
+            minimax_group_id: RAW_ENV.GROUP_ID || '',
+            minimax_model_id: "speech-02-turbo",
+            minimax_voice_id: RAW_ENV.VOICE_ID || "female-chengshu",
+            // Check if TTS API is properly configured
+            get hasTTSConfig() {
+                return this.minimax_api_key && this.minimax_api_key.length > 10 && this.minimax_group_id;
+            }
         };
 
         const { createApp } = Vue;
@@ -823,7 +710,8 @@
                     maxTurns: 3, // Limit to 3-5 turns for demo
 
                     // Matching State
-                    matchStep: 0, // 0:Choice, 1:Listening, 2:Analyzing, 3:Cards
+                    matchStep: 0, // 0:Choice, 1:Listening, 2:Analyzing, 3:Cards, 4:ApptInfo
+                    matchMode: 'realtime', // 'realtime' or 'appointment'
                     isEmergency: false,
                     selectedEscort: null,
 
@@ -835,10 +723,25 @@
                     isThinking: false,
                     thinkingText: "",
 
+                    // Escort Avatars (Change these URLs to real images)
+                    escortImages: {
+                        free: 'assets/assets/assets/card_volunteer.png',    // 1. 志愿者整张卡片
+                        student: 'assets/assets/assets/card_student.png',   // 2. 学生整张卡片
+                        pro: 'assets/assets/assets/card_pro.png'            // 3. 专家整张卡片
+                    },
+                    fallbackImages: {
+                        free: 'https://placehold.co/600x200/e2e8f0/475569?text=Volunteer+Card',
+                        student: 'https://placehold.co/600x200/e2e8f0/475569?text=Student+Card',
+                        pro: 'https://placehold.co/600x200/e2e8f0/475569?text=Pro+Card'
+                    },
+
                     // Audio
                     mediaRecorder: null,
                     audioChunks: [],
                     audioContext: null,
+                    
+                    // Map
+                    mapInstance: null,
 
                     // Visit State (陪诊视角)
                     visitTimelineItems: [],
@@ -1004,12 +907,80 @@
                     this.matchStep = 0;
                     this.log('Entered [Real-time Matching] Phase', 'info');
 
+                    // Map is initialized by @after-enter on transition
+                    
                     const prompt = "档案已为您建好。请问您是需要现在立刻陪诊，还是预约之后的陪诊？";
                     await this.playTTS(prompt);
                 },
 
+                initMap() {
+                    // Clean up if exists
+                    if (this.mapInstance) {
+                        this.mapInstance.remove();
+                        this.mapInstance = null;
+                    }
+
+                    this.$nextTick(() => {
+                        const mapEl = document.getElementById('map-container');
+                        if (!mapEl) return;
+
+                        // Haidian District, Beijing Coordinates (Near Zhongguancun)
+                        const center = [39.9788, 116.3025]; 
+                        
+                        this.mapInstance = L.map('map-container', {
+                            zoomControl: false,
+                            attributionControl: false
+                        }).setView(center, 13); // Zoom level
+
+                         // Dark/Light Mode Map Style (CartoDB Voyager)
+                        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                            maxZoom: 20
+                        }).addTo(this.mapInstance);
+
+                        // User Location Marker (Pulse Icon)
+                        const userIcon = L.divIcon({
+                            className: 'custom-div-icon',
+                            html: `<div class="w-6 h-6 bg-blue-500 rounded-full border-2 border-white shadow-lg animate-pulse relative z-50"></div>`,
+                            iconSize: [24, 24],
+                            iconAnchor: [12, 12]
+                        });
+                        L.marker(center, {icon: userIcon, zIndexOffset: 1000 }).addTo(this.mapInstance);
+
+                        // Generate Many Escort Markers (Populate the map)
+                        const escorts = [];
+                        // Add some fixed points for deterministic demo nearby
+                        escorts.push({ lat: 39.982, lng: 116.305, type: 'free' });
+                        escorts.push({ lat: 39.975, lng: 116.298, type: 'student' });
+                        escorts.push({ lat: 39.980, lng: 116.310, type: 'pro' });
+
+                        // Add 30 random points to make it look busy
+                        for(let i=0; i<30; i++) {
+                            escorts.push({
+                                lat: center[0] + (Math.random() - 0.5) * 0.08, 
+                                lng: center[1] + (Math.random() - 0.5) * 0.08,
+                                type: ['free', 'student', 'pro'][Math.floor(Math.random()*3)]
+                            });
+                        }
+
+                        escorts.forEach(e => {
+                            let color = e.type === 'free' ? 'bg-green-500' : (e.type === 'student' ? 'bg-blue-400' : 'bg-orange-500');
+                            // Add white border and shadow to make them pop out
+                            let icon = L.divIcon({
+                                className: 'custom-div-icon',
+                                html: `<div class="w-4 h-4 ${color} rounded-full border-2 border-white shadow-md transition-transform hover:scale-125 cursor-pointer"></div>`,
+                                iconSize: [16, 16]
+                            });
+                            L.marker([e.lat, e.lng], {icon: icon}).addTo(this.mapInstance);
+                        });
+                        
+                        // Force resize to fix grey tiles issues
+                        setTimeout(() => this.mapInstance.invalidateSize(), 500);
+                    });
+                },
+
                 async startRealTimeMatch() {
                     this.matchStep = 1; // Show listening UI
+                    this.matchMode = 'realtime';
                     this.log('User Value Selection: Real-time', 'info');
 
                     // AI Asks
@@ -1025,12 +996,37 @@
                     }, 4000);
                 },
 
+                // NEW: Appointment Logic
+                async startAppointmentMatch() {
+                    this.matchMode = 'appointment';
+                    this.log('User Value Selection: Appointment', 'info');
+                    
+                    // Step 1: Ask Info First (Before showing list)
+                    this.matchStep = 1; // Show listening UI
+                    const q_date = "好的，为您开启预约模式。请问您想预约哪天，去北京市哪家医院？";
+                    await this.playTTS(q_date);
+
+                    // Step 2: Simulate User Answer
+                    this.userTranscript = "";
+                    setTimeout(() => {
+                        this.userTranscript = "明天上午9点，想去北医三院。";
+                        
+                        setTimeout(async () => {
+                            const conf = "收到。已为您筛选出熟悉北医三院的陪诊员，请选择。";
+                            await this.playTTS(conf);
+
+                            // Step 3: Show Cards
+                            this.matchStep = 3; 
+                        }, 2000);
+                    }, 4000);
+                },
+
                 async analyzeRisk() {
                     this.matchStep = 2; // Analyzing
                     
                     // Logic: Simulate High Risk Detection
                     // In a real app, this would use LLM to classify intent
-                    const isHighRisk = true; 
+                    const isHighRisk = (this.matchMode === 'realtime'); // Force high risk for demo purpose in Realtime mode
 
                     if(isHighRisk) {
                         this.isEmergency = true;
@@ -1043,9 +1039,7 @@
                             this.displayHeader = "检测到您可能处于高风险状态！即刻为您匹配最近的急救资质陪诊员。";
                             await this.playTTS(this.displayHeader);
                             
-                            // Auto skip to cards or auto-select? 
-                            // Requirement: "Automatic selection of fastest match" if high risk
-                            // But requirement also says "Jump to this screen (cards), then auto select"
+                            // Visual transition of auto-selection
                             this.matchStep = 3;
                             
                             // Auto select after brief delay
@@ -1063,9 +1057,34 @@
                 },
 
                 async selectEscort(type) {
-                    this.selectedEscort = type;
                     this.log(`Escort Selected: ${type}`, 'success');
-                    
+
+                    // Branch Logic
+                    if (this.matchMode === 'appointment') {
+                         this.completeAppointmentMatch(type);
+                    } else {
+                         this.completeRealTimeMatch(type);
+                    }
+                },
+
+                async completeAppointmentMatch(type) {
+                    this.selectedEscort = type;
+                    // Map type to name for display
+                    const nameMap = { 'free': '李志愿者', 'student': '王同学', 'pro': '张护师' };
+                    const name = nameMap[type] || '陪诊员';
+
+                    const conf = `好的，已为您预约明天上午9点北医三院的${name}。订单已生成，请留意手机短信。`;
+                    await this.playTTS(conf);
+
+                    // Finish
+                    setTimeout(() => {
+                        this.appState = 'waiting';
+                        this.displayHeader = `预约已确认：明日 09:00 北医三院 (${name})`;
+                    }, 5000);
+                },
+
+                async completeRealTimeMatch(type) {
+                    this.selectedEscort = type;
                     // Transition to Waiting
                     this.appState = 'waiting';
                     
@@ -1077,6 +1096,13 @@
                 async playTTS(text) {
                     this.orbState = 'speaking';
                     this.statusText = "医依正在说话...";
+                    
+                    // Check if MiniMax API is configured
+                    if (!ENV.hasTTSConfig) {
+                        this.log("TTS API not configured, using browser fallback", 'info');
+                        await this.playBrowserTTS(text);
+                        return;
+                    }
                     
                     try {
                         this.log(`TTS Request: ${ENV.minimax_model_id}`, 'info'); 
@@ -1113,10 +1139,10 @@
                         
                         await this.playAudio(url);
                     } catch (e) {
-                        this.log("TTS Error: " + e.message, 'alert');
+                        this.log("TTS API Error, using browser fallback: " + e.message, 'alert');
                         console.error("TTS Detailed Error:", e);
-                        // Fallback: wait to simulate speaking time
-                        await new Promise(r => setTimeout(r, 3000));
+                        // Fallback to browser TTS
+                        await this.playBrowserTTS(text);
                     }
                     
                     // Only resume if we are not in special states
@@ -1131,10 +1157,45 @@
                         this.orbState = 'idle'; // Reset orb
                     }
                 },
+                
+                // Browser native TTS fallback (no API key needed)
+                async playBrowserTTS(text) {
+                    return new Promise((resolve) => {
+                        if ('speechSynthesis' in window) {
+                            // Cancel any ongoing speech
+                            window.speechSynthesis.cancel();
+                            
+                            const utterance = new SpeechSynthesisUtterance(text);
+                            utterance.lang = 'zh-CN';
+                            utterance.rate = 0.9;
+                            utterance.pitch = 1.0;
+                            
+                            // Try to find a Chinese voice
+                            const voices = window.speechSynthesis.getVoices();
+                            const zhVoice = voices.find(v => v.lang.includes('zh') || v.lang.includes('CN'));
+                            if (zhVoice) {
+                                utterance.voice = zhVoice;
+                            }
+                            
+                            utterance.onend = () => resolve();
+                            utterance.onerror = () => resolve();
+                            
+                            window.speechSynthesis.speak(utterance);
+                        } else {
+                            // No TTS available, wait to simulate speaking
+                            this.log("Browser TTS not available", 'alert');
+                            setTimeout(resolve, Math.min(text.length * 100, 5000));
+                        }
+                    });
+                },
 
                 // ==========================
                 // DEV / DEBUG INTERFACE
                 // ==========================
+                reloadApp() {
+                    window.location.reload();
+                },
+
                 jumpTo(scene) {
                     // 1. Reset Common States
                     if(window.speechSynthesis) window.speechSynthesis.cancel();
@@ -1162,19 +1223,22 @@
                             this.showResultCards = true;
                             // Fill simulated data
                             this.metrics = { pro: 60, str: 85, emp: 95 };
-                            this.extractedTags = { '科室': '心内科', '主诉': '心慌/气短', '年龄': '72岁', '行动': '需搀扶', '性格': '耐心', '语言': '本地方言' };
+                            this.extractedTags = { '科室': '心内科', '主诉': '心慌/气短', '年龄': '72岁', '行动': '需搀扶', '性格': '耐心', '语言': '本地方言', '性别': '限女性' };
                             this.matchStatus = 2;
                             break;
 
                         case 'matching':
                             this.appState = 'matching';
                             this.matchStep = 0;
+                            // Manually init map if jumping directly
+                            setTimeout(() => this.initMap(), 500);
                             break;
 
                         case 'risk':
                             this.appState = 'matching';
                             this.matchStep = 1; 
                             this.userTranscript = "";
+                            setTimeout(() => this.initMap(), 500);
                             // Auto run risk logic
                             setTimeout(() => {
                                 this.userTranscript = "我现在头特别晕，感觉天旋地转的，站都站不稳，心跳也很快...";
@@ -1186,6 +1250,7 @@
                             this.appState = 'matching';
                             this.matchStep = 3;
                             this.isEmergency = false; // Normal list view
+                            setTimeout(() => this.initMap(), 500);
                             break;
 
                         case 'waiting':
