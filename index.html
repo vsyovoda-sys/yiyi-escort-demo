@@ -1176,8 +1176,22 @@
                                 utterance.voice = zhVoice;
                             }
                             
-                            utterance.onend = () => resolve();
-                            utterance.onerror = () => resolve();
+                            // Set up timeout fallback in case onend doesn't fire
+                            const estimatedDuration = Math.max(text.length * 150, 3000);
+                            const timeoutId = setTimeout(() => {
+                                this.log("TTS timeout, continuing...", 'info');
+                                resolve();
+                            }, estimatedDuration);
+                            
+                            utterance.onend = () => {
+                                clearTimeout(timeoutId);
+                                resolve();
+                            };
+                            utterance.onerror = (e) => {
+                                clearTimeout(timeoutId);
+                                this.log("TTS error: " + e.error, 'alert');
+                                resolve();
+                            };
                             
                             window.speechSynthesis.speak(utterance);
                         } else {
