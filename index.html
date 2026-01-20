@@ -1101,48 +1101,47 @@
                     if (!ENV.hasTTSConfig) {
                         this.log("TTS API not configured, using browser fallback", 'info');
                         await this.playBrowserTTS(text);
-                        return;
-                    }
-                    
-                    try {
-                        this.log(`TTS Request: ${ENV.minimax_model_id}`, 'info'); 
-                        
-                        const res = await fetch(`https://api.minimax.chat/v1/text_to_speech?GroupId=${ENV.minimax_group_id}`, {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json",
-                                "Authorization": `Bearer ${ENV.minimax_api_key}`
-                            },
-                            body: JSON.stringify({
-                                voice_id: ENV.minimax_voice_id, 
-                                text: text,
-                                model: ENV.minimax_model_id
-                            })
-                        });
+                    } else {
+                        try {
+                            this.log(`TTS Request: ${ENV.minimax_model_id}`, 'info'); 
+                            
+                            const res = await fetch(`https://api.minimax.chat/v1/text_to_speech?GroupId=${ENV.minimax_group_id}`, {
+                                method: "POST",
+                                headers: {
+                                    "Content-Type": "application/json",
+                                    "Authorization": `Bearer ${ENV.minimax_api_key}`
+                                },
+                                body: JSON.stringify({
+                                    voice_id: ENV.minimax_voice_id, 
+                                    text: text,
+                                    model: ENV.minimax_model_id
+                                })
+                            });
 
-                        // Security Check: Did we get JSON (Error) instead of Audio?
-                        const contentType = res.headers.get("content-type");
-                        if (contentType && contentType.includes("application/json")) {
-                            const jsonErr = await res.json();
-                            throw new Error(`MiniMax API Error: ${JSON.stringify(jsonErr)}`);
+                            // Security Check: Did we get JSON (Error) instead of Audio?
+                            const contentType = res.headers.get("content-type");
+                            if (contentType && contentType.includes("application/json")) {
+                                const jsonErr = await res.json();
+                                throw new Error(`MiniMax API Error: ${JSON.stringify(jsonErr)}`);
+                            }
+                            
+                            if (!res.ok) {
+                                const errText = await res.text();
+                                throw new Error(`API HTTP Error: ${res.status} ${errText}`);
+                            }
+                            
+                            // Force Metadata for Browser Compatibility (macOS/iOS)
+                            const blob = await res.blob();
+                            const audioBlob = new Blob([blob], { type: 'audio/mpeg' });
+                            const url = URL.createObjectURL(audioBlob);
+                            
+                            await this.playAudio(url);
+                        } catch (e) {
+                            this.log("TTS API Error, using browser fallback: " + e.message, 'alert');
+                            console.error("TTS Detailed Error:", e);
+                            // Fallback to browser TTS
+                            await this.playBrowserTTS(text);
                         }
-                        
-                        if (!res.ok) {
-                            const errText = await res.text();
-                            throw new Error(`API HTTP Error: ${res.status} ${errText}`);
-                        }
-                        
-                        // Force Metadata for Browser Compatibility (macOS/iOS)
-                        const blob = await res.blob();
-                        const audioBlob = new Blob([blob], { type: 'audio/mpeg' });
-                        const url = URL.createObjectURL(audioBlob);
-                        
-                        await this.playAudio(url);
-                    } catch (e) {
-                        this.log("TTS API Error, using browser fallback: " + e.message, 'alert');
-                        console.error("TTS Detailed Error:", e);
-                        // Fallback to browser TTS
-                        await this.playBrowserTTS(text);
                     }
                     
                     // Only resume if we are not in special states
