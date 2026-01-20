@@ -47,12 +47,11 @@
         /* 第2页logo链接 */
         .logo-link {
             position: absolute;
-            /* logo在页面上部，不挡住下方文字 */
-            top: 22%;
+            top: 28%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 180px;
-            height: 180px;
+            width: 150px;
+            height: 150px;
             z-index: 10;
             cursor: pointer;
             transition: transform 0.3s ease;
@@ -106,15 +105,10 @@
 
         /* 移动端适配 */
         @media (max-width: 768px) {
-            .section img {
-                object-fit: contain;
-                background: #f5f0e8;
-            }
-
             .logo-link {
                 width: 100px;
                 height: 100px;
-                top: 20%;
+                top: 25%;
             }
 
             .page-nav {
@@ -132,9 +126,9 @@
         /* 超小屏幕（手机竖屏） */
         @media (max-width: 480px) {
             .logo-link {
-                width: 80px;
-                height: 80px;
-                top: 18%;
+                width: 70px;
+                height: 70px;
+                top: 22%;
             }
 
             .page-nav {
@@ -151,9 +145,9 @@
         /* 横屏模式 */
         @media (max-height: 500px) and (orientation: landscape) {
             .logo-link {
-                width: 80px;
-                height: 80px;
-                top: 25%;
+                width: 60px;
+                height: 60px;
+                top: 30%;
             }
         }
     </style>
